@@ -1,10 +1,10 @@
 package main
 
 import (
+	"encoding/json"
 	"flag"
 	"fmt"
 	"math"
-	"math/rand"
 	"net/http"
 	"strconv"
 	"strings"
@@ -61,9 +61,9 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 	handleError(err)
 	fmt.Println(time.Since(startX))
 
-	allInterfacesIO, err := net.IOCounters(true) //all net interfaces io stats
-	handleError(err)
-	fmt.Println(time.Since(startX))
+	// allInterfacesIO, err := net.IOCounters(true) //all net interfaces io stats
+	// handleError(err)
+	// fmt.Println(time.Since(startX))
 
 	combinedInterfaceIO, err := net.IOCounters(false) //combined net interfaces io stats
 	handleError(err)
@@ -145,13 +145,16 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 		html += "<br><br>"
 	}
 
-	html += "<br>Total Network Interfaces: " + strconv.Itoa(len(allInterfacesIO)) + "<br><br>"
-	for _, io := range allInterfacesIO {
-		html += formatNetIO(io) + "<br>"
-	}
+	html += "<h1>Network traffic stats</h1>"
+
+	// html += "<br>Total Network Interfaces: " + strconv.Itoa(len(allInterfacesIO)) + "<br><br>"
+	// for _, io := range allInterfacesIO {
+	// 	html += formatNetIO(io) + "<br>"
+	// }
 
 	html += "<br>Total Stats:<br>"
 	html += formatNetIO(combinedInterfaceIO[0])
+
 	html += "</body></html>"
 
 	w.Write([]byte(html))
@@ -168,29 +171,68 @@ func formatNetIO(io net.IOCountersStat) string {
 	return ret
 }
 
-func defaultHandler(w http.ResponseWriter, r *http.Request) {
-	var html = `<html>
-	<head>
-	<title>Whatever</title>
-	</head>
-	<body>
-	<h1>Server is up and running.</h1>
-	<br>
-	<a href="/test">Test</a>
-	<br>
-	<a href="/gethwdata">Show Hardware Data</a>
-	</body>
-	</html>`
-	w.Write([]byte(html))
+func getDataRequest(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Get Request from: " + r.RemoteAddr)
+	switch r.Method {
+	case "GET":
+		// paramString := r.URL.RawQuery
+		// fmt.Fprint(w, "test")
+		// jsonData, err := json.Marshal(getData(5))
+		jsonData, err := json.Marshal(datasets)
+		handleError(err)
+		fmt.Fprint(w, string(jsonData))
+	default:
+		fmt.Fprintf(w, "Only GET is supported")
+	}
+}
+
+func read(w http.ResponseWriter, r *http.Request) {
+	fmt.Println("Read Request from: " + r.RemoteAddr)
+	datasets = append(datasets, readCurrentData())
+}
+
+func getData(entries uint) []DataObject {
+
+	return datasets[entries:]
 }
 
 func testHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Test"))
 }
 
+func readCurrentData() DataObject {
+	fmt.Println("readCurrentData()")
+	vmStat, err := mem.VirtualMemory() // Physical Memory
+	handleError(err)
+	partitionsStat, err := disk.Partitions(true) //Partition List
+	handleError(err)
+	percentage, err := cpu.Percent(0, false) //All core utilization stats
+	handleError(err)
+	hostStat, err := host.Info() // host Info
+	handleError(err)
+	combinedInterfaceIO, err := net.IOCounters(false) //combined net interfaces io stats
+	handleError(err)
+
+	var dataset = DataObject{}
+	dataset.Timestamp = time.Now()
+	dataset.RAM = RAMStats{vmStat.Total, vmStat.Available, vmStat.Used}
+	var partitionStatsArr = make([]PartitionStats, len(partitionsStat))
+	for i, partitionStat := range partitionsStat {
+		var partitionName = partitionStat.Mountpoint
+		diskStat, err := disk.Usage(partitionName)
+		handleError(err)
+		partitionStatsArr[i] = PartitionStats{partitionName, diskStat.Total, diskStat.Free, diskStat.Used}
+	}
+	dataset.Partitions = partitionStatsArr
+	dataset.CPU = CPUStats{percentage[0]}
+	dataset.System = SystemStats{hostStat.Uptime, hostStat.Procs}
+	dataset.Network = NetStats{combinedInterfaceIO[0].BytesSent, combinedInterfaceIO[0].BytesRecv}
+	return dataset
+}
+
 func readData() {
-	list.Add(DataObject{time.Now(), rand.Intn(50), rand.Intn(50)})
-	fmt.Println(list)
+	fmt.Println("readData()")
+	datasets = append(datasets, readCurrentData())
 }
 
 const (
@@ -253,12 +295,21 @@ func formatTimeDuration(duration time.Duration) string {
 }
 
 var list DynArray
+var datasets []DataObject
 
 func main() {
+	data := readCurrentData()
+	fmt.Println(data)
+
+	// jsonData, err := json.Marshal(data)
+	// handleError(err)
+	// fmt.Println(string(jsonData))
+	// return
+
 	fmt.Println("Starting...")
 	var portFlag = flag.Int("port", 1510, "Port the webserver will be running on")
 	var delayFlag = flag.Int("delay", 5, "Seconds between getting data")
-	var entriesFlag = flag.Int("entries", 10000, "Amout of entries that will be stored in the memory")
+	var entriesFlag = flag.Int("entries", 10, "Amout of entries that will be stored in the memory")
 	flag.Parse()
 
 	var delay = *delayFlag
@@ -268,6 +319,7 @@ func main() {
 	fmt.Printf("Running on Port %v\n", port)
 
 	list = DynArray{list: make([]DataObject, entries)}
+	datasets = make([]DataObject, 0, entries)
 	if false {
 		go func() {
 			for {
@@ -277,9 +329,18 @@ func main() {
 		}()
 	}
 
-	http.HandleFunc("/", defaultHandler)
+	go func() {
+		for i := 0; i < 5; i++ {
+			readData()
+			time.Sleep(time.Duration(3) * time.Second)
+		}
+	}()
+
 	http.HandleFunc("/test", testHandler)
 	http.HandleFunc("/gethwdata", getHardwareData)
+	http.HandleFunc("/getdata", getDataRequest)
+	http.HandleFunc("/read", read)
+	http.Handle("/", http.FileServer(http.Dir("./web")))
 
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
 }
