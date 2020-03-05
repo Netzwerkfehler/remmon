@@ -309,7 +309,7 @@ func main() {
 	fmt.Println("Starting...")
 	var portFlag = flag.Int("port", 1510, "Port the webserver will be running on")
 	var delayFlag = flag.Int("delay", 5, "Seconds between getting data")
-	var entriesFlag = flag.Int("entries", 10, "Amout of entries that will be stored in the memory")
+	var entriesFlag = flag.Int("entries", 50, "Amout of entries that will be stored in the memory")
 	flag.Parse()
 
 	var delay = *delayFlag
