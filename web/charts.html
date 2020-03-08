@@ -2,93 +2,116 @@
 <html>
 
 <head>
-    <title>Line Chart</title>
-    <script src="chartjs/Chart.bundle.js"></script>
-    <script src="chartjs/utils.js"></script>
-    <style>
-        canvas {
-            -moz-user-select: none;
-            -webkit-user-select: none;
-            -ms-user-select: none;
-        }
-    </style>
+    <title>Charts</title>
+    <script src="scripts/moment.min.js"></script>
+    <script src="scripts/Chart.min.js"></script>
+    <link href="style.css" rel="stylesheet">
+    <script src="script.js"></script>
 </head>
 
 <body>
-    <div style="width:50%">
-        <canvas id="canvas"></canvas>
-    </div>
+    <h1>Hardware Statistics</h1>
     <script>
-        function getData() {
-            var values = [];
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4 && this.status == 200) {
-                    var objArr = JSON.parse(this.responseText);
-                    for(var i=0;i < objArr.length; i++){
-                        var obj = objArr[i];
-                        values.push(obj.ram.used / 1024 / 1024 / 1024);
-                    }
-                    return values
+        var dataSource = {
+            values: [],
+            byteToGB: function(bytes){
+                return bytes / 1024 / 1024 / 1024;
+            },
+            getValues: function () {
+                if (this.values.length > 0) {
+                    return this.values;
                 }
-            };
-            xhttp.open("GET", "/getdata", false);
-            xhttp.send();
-            return values;
+                var xhttp = new XMLHttpRequest();
+                xhttp.onreadystatechange = function () {
+                    if (this.readyState == 4 && this.status == 200) {
+                        dataSource.values = JSON.parse(this.responseText);
+                    }
+                };
+                xhttp.open("GET", "/getdata", false);
+                xhttp.send();
+                return this.values;
+            },
+            getRAMUsage: function () {
+                var ret = [];
+                var values = this.getValues();
+                for (var i = 0; i < values.length; i++) {
+                    var obj = values[i];
+                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                    ret.push({ t: unixTime, y: obj.ram.used / 1024 / 1024 / 1024 });
+                }
+                return ret;
+            },
+            getRAMData: function () {
+                var ret = {};
+                var objArr = this.getValues();
+                var current = objArr[objArr.length - 1];
+                ret.data = [current.ram.free / 1024 / 1024 / 1024, current.ram.used / 1024 / 1024 / 1024];
+                ret.max = current.ram.total / 1024 / 1024 / 1024;
+                return ret;
+            },
+            getCPUData: function () {
+                var ret = [];
+                var objArr = this.getValues();
+                for (var i = 0; i < objArr.length; i++) {
+                    var obj = objArr[i];
+                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                    ret.push({ t: unixTime, y: obj.cpu.utilization });
+                }
+                return ret;
+            },
+            getPartitionUsage: function(){
+                var ret = [];
+                var objArr = this.getValues();
+                for (var i = 0; i < objArr.length; i++) {
+                    var obj = objArr[i];
+                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                    ret.push({ t: unixTime, y: this.byteToGB(obj.partitions[0].used) });
+                }
+                return ret;
+            },
+            getPartitionData: function(){
+                var ret = {};
+                var objArr = this.getValues();
+                var current = objArr[objArr.length - 1];
+                ret.data = [current.partitions[0].free / 1024 / 1024 / 1024, current.partitions[0].used / 1024 / 1024 / 1024];
+                ret.max = current.partitions[0].total / 1024 / 1024 / 1024;
+                return ret;
+            }
         }
 
-        var MONTHS = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
-        var config = {
-            type: 'line',
-            data: {
-                labels: ['January', 'February', 'March', 'April', 'May', 'June', 'July'],
-                datasets: [{
-                    label: 'Ram Usage',
-                    backgroundColor: window.chartColors.red,
-                    borderColor: window.chartColors.red,
-                    fill: false
-                }]
-            },
-            options: {
-                responsive: true,
-                title: {
-                    display: true,
-                    text: 'Ram usage chart'
-                },
-                tooltips: {
-                    mode: 'index',
-                    intersect: false,
-                },
-                hover: {
-                    mode: 'nearest',
-                    intersect: true
-                },
-                scales: {
-                    xAxes: [{
-                        display: true,
-                        scaleLabel: {
-                            display: true,
-                            labelString: 'Time'
-                        }
-                    }],
-                    yAxes: [{
-                        display: true,
-                        scaleLabel: {
-                            display: true,
-                            labelString: 'Value'
-                        }
-                    }]
-                }
-            }
-        };
+        var ramDiv = createDiv("ram");
+        generateChart(createChartWrapper("chart1", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage());
+        var ramData = dataSource.getRAMData();
+        generatePieChart(createChartWrapper("pie-chart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+        
+        generateChart(createChartWrapper("chart2", "all lineChart"), "CPU usage", "CPU in %", "%", dataSource.getCPUData());
 
-        window.onload = function () {
-            var ctx = document.getElementById('canvas').getContext('2d');
-            window.myLine = new Chart(ctx, config);
-            window.myLine.update();
-        };
+        var partitionDiv = createDiv("partitions")
+        generateChart(createChartWrapper("test", "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage());
+        var pData = dataSource.getPartitionData();
+        generatePieChart(createChartWrapper("pieChartX", "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
 
-        config.data.datasets[0].data = getData();
+
+        function createDiv(id){
+            //TODO: sub headlines
+            var divEl = document.createElement("div");
+            document.getElementsByTagName("body")[0].appendChild(divEl);
+            divEl.id = id;
+            divEl.style.display = "flex";
+            return divEl;
+        }
+
+        function createChartWrapper(id, classes, parent){
+            var target = parent || document.getElementsByTagName("body")[0];
+
+            var divEl = document.createElement("div");
+            divEl.classList = classes;
+            target.appendChild(divEl);
+            var canvasEl = document.createElement("canvas");
+            canvasEl.id = id;
+            divEl.appendChild(canvasEl);
+            return id;
+        }
     </script>
 </body>
 

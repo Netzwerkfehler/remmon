@@ -1,15 +1,3 @@
-function requestData() {
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-            var obj = JSON.parse(this.responseText);
-            console.log(obj)
-        }
-    };
-    xhttp.open("GET", "/getdata", true);
-    xhttp.send();
-}
-
 function getData() {
     var values = [];
     var xhttp = new XMLHttpRequest();
@@ -31,17 +19,12 @@ function getData() {
 }
 
 function generateChart(elementId, title, yAxisName, unitString, chartData) {
-    var ctx = document.getElementById(elementId).getContext("2d");
-    ctx.canvas.width = 1000;
-    ctx.canvas.height = 200;
-
-    var color = Chart.helpers.color;
     var cfg = {
         data: {
             datasets: [{
                 label: title,
-                backgroundColor: color(window.chartColors.red).alpha(0.5).rgbString(),
-                borderColor: window.chartColors.red,
+                backgroundColor: "#0C47EB",
+                borderColor: "#0C47EB",
                 data: chartData,
                 type: "line",
                 fill: false,
@@ -88,6 +71,12 @@ function generateChart(elementId, title, yAxisName, unitString, chartData) {
                     scaleLabel: {
                         display: true,
                         labelString: yAxisName
+                    },
+                    ticks: {
+                        //TODO: function paramters
+                        suggestedMin: 0,
+                        stepSize: 0.5
+                        // suggestedMax: 100
                     }
                 }]
             },
@@ -107,11 +96,15 @@ function generateChart(elementId, title, yAxisName, unitString, chartData) {
             }
         }
     };
+
+    var ctx = document.getElementById(elementId).getContext("2d");
+    ctx.canvas.width = 1000;
+    ctx.canvas.height = 200;
     return new Chart(ctx, cfg);
 }
 
 function generatePieChart(elementId, title, yAxisName, unitString, labels, colors, chartData, maxValue) {
-    return new Chart(document.getElementById(elementId), {
+    var config = {
         type: "pie",
         data: {
             labels: labels,
@@ -131,20 +124,16 @@ function generatePieChart(elementId, title, yAxisName, unitString, labels, color
                 mode: "index",
                 callbacks: {
                     label: function (tooltipItem, myData) {
-                        var value = myData.datasets[0].data[tooltipItem.datasetIndex];
-                        var label = myData.labels[tooltipItem.datasetIndex] || "";
-                        if (label) {
-                            label += ": ";
-                        }
+                        var value = myData.datasets[0].data[tooltipItem.index];
+                        var label = myData.labels[tooltipItem.index] +": ";
+                        
                         var percent = value / maxValue * 100;
-                        console.log(value);
-                        console.log(maxValue);
-                        // label += parseFloat(tooltipItem.value).toFixed(2) + " " + unitString + " " + percent;
-                        label += value + " " + unitString + " " + percent;
-                        return label;
+
+                        return label + value.toFixed(2) + " " + unitString + " (" + percent.toFixed(2)+ "%)";
                     }
                 }
             }
         }
-    });
+    }
+    return new Chart(document.getElementById(elementId), config);
 }

@@ -1,8 +1,27 @@
-body{
-    background-color: grey;
-    color: white;
+ body{
+    font-family: sans-serif;
+    /* background-color: grey;
+    color: white; */
 }
 
 h1{
     text-align: center;
+}
+
+.all {
+    border: 1px solid silver;
+    margin-bottom: 10px;
+}
+
+.lineChart {
+    width: 100%;
+}
+
+.lineChartX {
+    width: 75%;
+    margin-right: 10px;
+}
+
+.pieChart {
+    width: 25%;
 }
