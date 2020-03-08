@@ -179,8 +179,11 @@ func getDataRequest(w http.ResponseWriter, r *http.Request) {
 		// fmt.Fprint(w, "test")
 		// jsonData, err := json.Marshal(getData(5))
 		jsonData, err := json.Marshal(datasets)
-		handleError(err)
-		fmt.Fprint(w, string(jsonData))
+		if err == nil {
+			fmt.Fprint(w, string(jsonData))
+		} else {
+			fmt.Fprint(w, "Internal Error")
+		}
 	default:
 		fmt.Fprintf(w, "Only GET is supported")
 	}
@@ -214,7 +217,7 @@ func readCurrentData() DataObject {
 	handleError(err)
 
 	var dataset = DataObject{}
-	dataset.Timestamp = time.Now()
+	dataset.Timestamp = JSONTime{time.Now()}
 	dataset.RAM = RAMStats{vmStat.Total, vmStat.Available, vmStat.Used}
 	var partitionStatsArr = make([]PartitionStats, len(partitionsStat))
 	for i, partitionStat := range partitionsStat {
