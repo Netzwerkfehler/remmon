@@ -70,7 +70,7 @@ function generateChart(elementId, title, yAxisName, unitString, chartData) {
                     },
                     time: {
                         unit: "minute",
-                        stepSize: 30,
+                        stepSize: 5,
                         parser: "YYYY-MM-DD HH:mm:ss",
                         tooltipFormat: "HH:mm:ss DD.MM.YYYY",
                         displayFormats: {
@@ -100,7 +100,7 @@ function generateChart(elementId, title, yAxisName, unitString, chartData) {
                         if (label) {
                             label += ": ";
                         }
-                        label += parseFloat(tooltipItem.value).toFixed(2)+ " " + unitString;
+                        label += parseFloat(tooltipItem.value).toFixed(2) + " " + unitString;
                         return label;
                     }
                 }
@@ -108,4 +108,43 @@ function generateChart(elementId, title, yAxisName, unitString, chartData) {
         }
     };
     return new Chart(ctx, cfg);
+}
+
+function generatePieChart(elementId, title, yAxisName, unitString, labels, colors, chartData, maxValue) {
+    return new Chart(document.getElementById(elementId), {
+        type: "pie",
+        data: {
+            labels: labels,
+            datasets: [{
+                label: yAxisName,
+                backgroundColor: colors,
+                data: chartData
+            }]
+        },
+        options: {
+            title: {
+                display: true,
+                text: title
+            },
+            tooltips: {
+                intersect: false,
+                mode: "index",
+                callbacks: {
+                    label: function (tooltipItem, myData) {
+                        var value = myData.datasets[0].data[tooltipItem.datasetIndex];
+                        var label = myData.labels[tooltipItem.datasetIndex] || "";
+                        if (label) {
+                            label += ": ";
+                        }
+                        var percent = value / maxValue * 100;
+                        console.log(value);
+                        console.log(maxValue);
+                        // label += parseFloat(tooltipItem.value).toFixed(2) + " " + unitString + " " + percent;
+                        label += value + " " + unitString + " " + percent;
+                        return label;
+                    }
+                }
+            }
+        }
+    });
 }

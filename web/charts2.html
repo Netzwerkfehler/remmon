@@ -8,19 +8,25 @@
     <script src="chartjs/utils.js"></script>
     <script src="script.js"></script>
     <style>
-        .chart {
+        .lineChart {
             width: 100%;
+        }
+        .pieChart{
+            width: 25%;
         }
     </style>
 </head>
 
 <body>
-    <div class="chart">
+    <div class="lineChart">
         <canvas id="chart1"></canvas>
     </div>
 
-    <div class="chart">
+    <div class="lineChart">
         <canvas id="chart2"></canvas>
+    </div>
+    <div class="pieChart">
+        <canvas id="pie-chart"></canvas>
     </div>
 
     <!-- <br>
@@ -38,12 +44,28 @@
                         values.push({ t: unixTime, y: obj.ram.used / 1024 / 1024 / 1024 });
                         // values.push({t: unixTime, y: obj.ram.used});
                     }
-                    return values
                 }
             };
             xhttp.open("GET", "/getdata", false);
             xhttp.send();
             return values;
+        }
+
+        function getRAMData() {
+            var ret = {};
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4 && this.status == 200) {
+                    var objArr = JSON.parse(this.responseText);
+                    var current = objArr[objArr.length-1];
+                    ret.data = [current.ram.free / 1024 / 1024 / 1024, current.ram.used / 1024 / 1024 / 1024];
+                    ret.max = current.ram.total / 1024 / 1024 / 1024;
+                }
+            };
+            xhttp.open("GET", "/getdata", false);
+            xhttp.send();
+            console.log(ret);
+            return ret;
         }
 
         function getData2() {
@@ -57,7 +79,6 @@
                         var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
                         values.push({ t: unixTime, y: obj.cpu.utilization });
                     }
-                    return values
                 }
             };
             xhttp.open("GET", "/getdata", false);
@@ -66,6 +87,8 @@
         }
         var ramChart = generateChart("chart1", "RAM usage", "RAM in GB", "GB", getData());
         var cpuChart = generateChart("chart2", "CPU usage", "CPU in %", "%", getData2());
+
+        generatePieChart("pie-chart", "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], getRAMData().data, getRAMData().max);
 
         // document.getElementById("update").addEventListener("click", function () {
         //     var dataset = chart.config.data.datasets[0];
