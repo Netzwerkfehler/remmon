@@ -125,15 +125,48 @@ function generatePieChart(elementId, title, yAxisName, unitString, labels, color
                 callbacks: {
                     label: function (tooltipItem, myData) {
                         var value = myData.datasets[0].data[tooltipItem.index];
-                        var label = myData.labels[tooltipItem.index] +": ";
-                        
+                        var label = myData.labels[tooltipItem.index] + ": ";
+
                         var percent = value / maxValue * 100;
 
-                        return label + value.toFixed(2) + " " + unitString + " (" + percent.toFixed(2)+ "%)";
+                        return label + value.toFixed(2) + " " + unitString + " (" + percent.toFixed(2) + "%)";
                     }
                 }
             }
         }
     }
     return new Chart(document.getElementById(elementId), config);
+}
+
+function createDiv(id) {
+    var divEl = document.createElement("div");
+    document.getElementsByTagName("body")[0].appendChild(divEl);
+    divEl.id = id;
+    divEl.classList = "chartDiv";
+    return divEl;
+}
+
+function insertHeadline(text) {
+    var hl = document.createElement("h1");
+    hl.textContent = text;
+    hl.classList = "statHL";
+    document.getElementsByTagName("body")[0].appendChild(hl);
+}
+
+function wrap(element) {
+    var div = document.createElement("div");
+    div.appendChild(element);
+    return div;
+}
+
+function createChartWrapper(id, classes, parent) {
+    var target = parent || document.getElementsByTagName("body")[0];
+
+    var divEl = document.createElement("div");
+    divEl.classList = classes;
+    target.appendChild(divEl);
+    var canvasEl = document.createElement("canvas");
+    canvasEl.id = id;
+    divEl.appendChild(canvasEl);
+    return id;
 }

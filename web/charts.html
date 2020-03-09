@@ -14,7 +14,7 @@
     <script>
         var dataSource = {
             values: [],
-            byteToGB: function(bytes){
+            byteToGB: function (bytes) {
                 return bytes / 1024 / 1024 / 1024;
             },
             getValues: function () {
@@ -59,58 +59,50 @@
                 }
                 return ret;
             },
-            getPartitionUsage: function(){
+            getPartitionUsage: function (index) {
                 var ret = [];
                 var objArr = this.getValues();
                 for (var i = 0; i < objArr.length; i++) {
                     var obj = objArr[i];
                     var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: this.byteToGB(obj.partitions[0].used) });
+                    ret.push({ t: unixTime, y: this.byteToGB(obj.partitions[index].used) });
                 }
                 return ret;
             },
-            getPartitionData: function(){
+            getPartitionData: function (index) {
                 var ret = {};
                 var objArr = this.getValues();
                 var current = objArr[objArr.length - 1];
-                ret.data = [current.partitions[0].free / 1024 / 1024 / 1024, current.partitions[0].used / 1024 / 1024 / 1024];
-                ret.max = current.partitions[0].total / 1024 / 1024 / 1024;
+                ret.data = [current.partitions[index].free / 1024 / 1024 / 1024, current.partitions[index].used / 1024 / 1024 / 1024];
+                ret.max = current.partitions[index].total / 1024 / 1024 / 1024;
                 return ret;
+            },
+            getPartitionCount: function () {
+                var objArr = this.getValues();
+                return objArr[objArr.length - 1].partitions.length;
+            },
+            getPartitionName: function (index) {
+                var objArr = this.getValues();
+                return objArr[objArr.length - 1].partitions[index].name;
             }
         }
 
+        insertHeadline("RAM");
         var ramDiv = createDiv("ram");
-        generateChart(createChartWrapper("chart1", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage());
+        generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage());
         var ramData = dataSource.getRAMData();
-        generatePieChart(createChartWrapper("pie-chart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
-        
-        generateChart(createChartWrapper("chart2", "all lineChart"), "CPU usage", "CPU in %", "%", dataSource.getCPUData());
+        generatePieChart(createChartWrapper("ramPirChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
 
-        var partitionDiv = createDiv("partitions")
-        generateChart(createChartWrapper("test", "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage());
-        var pData = dataSource.getPartitionData();
-        generatePieChart(createChartWrapper("pieChartX", "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+        insertHeadline("CPU");
+        var cpuDiv = createDiv("cpu");
+        generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData());
 
-
-        function createDiv(id){
-            //TODO: sub headlines
-            var divEl = document.createElement("div");
-            document.getElementsByTagName("body")[0].appendChild(divEl);
-            divEl.id = id;
-            divEl.style.display = "flex";
-            return divEl;
-        }
-
-        function createChartWrapper(id, classes, parent){
-            var target = parent || document.getElementsByTagName("body")[0];
-
-            var divEl = document.createElement("div");
-            divEl.classList = classes;
-            target.appendChild(divEl);
-            var canvasEl = document.createElement("canvas");
-            canvasEl.id = id;
-            divEl.appendChild(canvasEl);
-            return id;
+        for (var i = 0; i < dataSource.getPartitionCount(); i++) {
+            insertHeadline("Disk " + dataSource.getPartitionName(i));
+            var partitionDiv = createDiv("partition" + i);
+            generateChart(createChartWrapper("partitionChart" + i, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(i));
+            var pData = dataSource.getPartitionData(i);
+            generatePieChart(createChartWrapper("partitionPieChart" + i, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
         }
     </script>
 </body>

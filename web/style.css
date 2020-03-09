@@ -1,7 +1,7 @@
  body{
     font-family: sans-serif;
-    /* background-color: grey;
-    color: white; */
+    background-color: #0f1620;
+    color: white;
 }
 
 h1{
@@ -24,4 +24,14 @@ h1{
 
 .pieChart {
     width: 25%;
+}
+
+.chartDiv{
+    display: flex;
+    margin-bottom: 10px;
+}
+
+.statHL{
+    text-align: center;
+    text-decoration: underline;
 }
