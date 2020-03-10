@@ -84,26 +84,73 @@
             getPartitionName: function (index) {
                 var objArr = this.getValues();
                 return objArr[objArr.length - 1].partitions[index].name;
+            },
+            getDownload: function () {
+                var ret = [];
+                var values = this.getValues();
+                for (var i = 0; i < values.length; i++) {
+                    var obj = values[i];
+                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                    ret.push({ t: unixTime, y: obj.network.recv / 1024 / 1024 / 1024 });
+                }
+                return ret;
+            },
+            getUpload: function () {
+                var ret = [];
+                var values = this.getValues();
+                for (var i = 0; i < values.length; i++) {
+                    var obj = values[i];
+                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                    ret.push({ t: unixTime, y: obj.network.sent / 1024 / 1024 / 1024 });
+                }
+                return ret;
+            },
+            getProcesses: function () {
+                var ret = [];
+                var values = this.getValues();
+                for (var i = 0; i < values.length; i++) {
+                    var obj = values[i];
+                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                    ret.push({ t: unixTime, y: obj.system.processes });
+                }
+                return ret;
+            },
+            getUptime: function () {
+                var objArr = this.getValues();
+                return objArr[objArr.length - 1].system.uptime;
             }
         }
 
         insertHeadline("RAM");
         var ramDiv = createDiv("ram");
-        generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage());
         var ramData = dataSource.getRAMData();
+        generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
         generatePieChart(createChartWrapper("ramPirChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
 
         insertHeadline("CPU");
         var cpuDiv = createDiv("cpu");
-        generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData());
+        generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData(), { min: 0, max: 100, step: 10 });
 
         for (var i = 0; i < dataSource.getPartitionCount(); i++) {
             insertHeadline("Disk " + dataSource.getPartitionName(i));
             var partitionDiv = createDiv("partition" + i);
-            generateChart(createChartWrapper("partitionChart" + i, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(i));
             var pData = dataSource.getPartitionData(i);
+            generateChart(createChartWrapper("partitionChart" + i, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(i), { min: 0, max: pData.max, step: 50 });
             generatePieChart(createChartWrapper("partitionPieChart" + i, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
         }
+
+        insertHeadline("Network");
+        var dlDiv = createDiv("download");
+        generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", dataSource.getDownload(), { min: 0, max: 0, step: 0.5 });
+        var ulDiv = createDiv("upload");
+        generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", dataSource.getUpload(), { min: 0, max: 0, step: 0.1 });
+
+        insertHeadline("Processes");
+        var procDiv = createDiv("processes");
+        generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", dataSource.getProcesses(), { min: 0, max: 0, step: 10 });
+
+        insertHeadline("Uptime");
+        insertHeadline(formatTimeDuration(dataSource.getUptime()));
     </script>
 </body>
 

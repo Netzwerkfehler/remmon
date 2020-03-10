@@ -18,7 +18,7 @@ function getData() {
     return values;
 }
 
-function generateChart(elementId, title, yAxisName, unitString, chartData) {
+function generateChart(elementId, title, yAxisName, unitString, chartData, range) {
     var cfg = {
         data: {
             datasets: [{
@@ -73,10 +73,9 @@ function generateChart(elementId, title, yAxisName, unitString, chartData) {
                         labelString: yAxisName
                     },
                     ticks: {
-                        //TODO: function paramters
-                        suggestedMin: 0,
-                        stepSize: 0.5
-                        // suggestedMax: 100
+                        suggestedMin: range.min,
+                        suggestedMax: range.max,
+                        stepSize:     range.step
                     }
                 }]
             },
@@ -169,4 +168,26 @@ function createChartWrapper(id, classes, parent) {
     canvasEl.id = id;
     divEl.appendChild(canvasEl);
     return id;
+}
+
+function formatTimeDuration(seconds_) {
+	var builder = "";
+
+	var seconds = Math.floor(seconds_) % 60
+	var minutes = Math.floor(seconds_ / 60) % 60
+	var hours   = Math.floor(seconds_ / 60 / 60) % 24
+	var days    = Math.floor(seconds_ / 60 / 60 / 24)
+
+	if (days > 0) {
+		builder += days + "d ";
+	}
+	if (hours > 0) {
+		builder += hours + "h "
+	}
+	if (minutes > 0) {
+		builder += minutes + "m ";
+	}
+	builder += seconds + "s";
+
+    return builder;
 }
