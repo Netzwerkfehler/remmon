@@ -172,7 +172,7 @@ func formatNetIO(io net.IOCountersStat) string {
 }
 
 func getDataRequest(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Get Request from: " + r.RemoteAddr)
+	fmt.Println("getDataRequest from: " + r.RemoteAddr)
 	switch r.Method {
 	case "GET":
 		// paramString := r.URL.RawQuery
@@ -192,6 +192,100 @@ func getDataRequest(w http.ResponseWriter, r *http.Request) {
 func read(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Read Request from: " + r.RemoteAddr)
 	datasets = append(datasets, readCurrentData())
+}
+
+func raw(w http.ResponseWriter, r *http.Request) {
+	startX := time.Now()
+
+	vmStat, err := mem.VirtualMemory() // Physical Memory
+	handleError(err)
+
+	swapStat, err := mem.SwapMemory() //Virtual Memory
+	handleError(err)
+
+	partitionsStat, err := disk.Partitions(true) //Partition List
+	handleError(err)
+
+	cpuStat, err := cpu.Info() //CPU stats
+	handleError(err)
+
+	percentage, err := cpu.Percent(0, false) //All core utilization stats
+	handleError(err)
+
+	allCores, err := cpu.Percent(0, true) //Combined utilization stats
+	handleError(err)
+
+	hostStat, err := host.Info() // host Info
+	handleError(err)
+
+	interfStat, err := net.Interfaces() //get network interfaces
+	handleError(err)
+
+	allInterfacesIO, err := net.IOCounters(true) //all net interfaces io stats
+	handleError(err)
+
+	combinedInterfaceIO, err := net.IOCounters(false) //combined net interfaces io stats
+	handleError(err)
+
+	fmt.Println("All stats read")
+
+	var html string = "<html><body style=\"font-family: sans-serif;\">"
+
+	html += "<h1>RAM</h1>"
+	html += vmStat.String()
+
+	html += "<h1>Swap</h1>"
+	html += swapStat.String()
+
+	html += "<h1>Patitions</h1>"
+	for _, partitionStat := range partitionsStat {
+		html += partitionStat.String() + "<br>"
+		var partitionName = partitionStat.Mountpoint
+		diskStat, _ := disk.Usage(partitionName)
+		html += diskStat.String() + "<br>"
+
+		ioCounters, err := disk.IOCounters(partitionName)
+		handleError(err)
+		for _, ioStat := range ioCounters {
+			html += ioStat.String() + "<br>"
+		}
+		html += "<br>"
+	}
+
+	html += "<h1>CPU</h1>"
+	for _, cpu := range cpuStat {
+		html += cpu.String()
+	}
+
+	html += "<br>CPU utilization: " + formatRound(percentage[0], 0) + "%<br>"
+	for idx, cpupercent := range allCores {
+		html += "Core " + strconv.Itoa(idx) + " utilization: " + formatRound(cpupercent, 0) + "%<br>"
+	}
+
+	html += "<h1>System</h1>"
+	html += hostStat.String()
+
+	html += "<h1>Network Interfaces</h1>"
+	for _, interf := range interfStat {
+		html += interf.String() + "<br>"
+	}
+
+	html += "<h1>Network traffic stats</h1>"
+
+	html += "<br>Total Network Interfaces: " + strconv.Itoa(len(allInterfacesIO)) + "<br><br>"
+	for _, io := range allInterfacesIO {
+		html += io.String() + "<br>"
+	}
+
+	html += "<br>Total Stats:<br>"
+	html += combinedInterfaceIO[0].String()
+
+	html += "</body></html>"
+
+	w.Write([]byte(html))
+
+	fmt.Print("Raw Stat read time: ")
+	fmt.Println(time.Since(startX))
 }
 
 func getData(entries uint) []DataObject {
@@ -315,26 +409,19 @@ func main() {
 
 	list = DynArray{list: make([]DataObject, entries)}
 	datasets = make([]DataObject, 0, entries)
-	// if false {
+
 	go func() {
 		for {
 			readData()
 			time.Sleep(time.Duration(delay) * time.Second)
 		}
 	}()
-	// }
-
-	// go func() {
-	// 	for i := 0; i < 5; i++ {
-	// 		readData()
-	// 		time.Sleep(time.Duration(3) * time.Second)
-	// 	}
-	// }()
 
 	http.HandleFunc("/test", testHandler)
 	http.HandleFunc("/gethwdata", getHardwareData)
 	http.HandleFunc("/getdata", getDataRequest)
 	http.HandleFunc("/read", read)
+	http.HandleFunc("/raw", raw)
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)
