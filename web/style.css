@@ -1,10 +1,12 @@
- body{
+body {
     font-family: sans-serif;
     background-color: #0f1620;
     color: white;
+    margin: 0;
+    padding: 5px;
 }
 
-h1{
+h1 {
     text-align: center;
 }
 
@@ -26,12 +28,30 @@ h1{
     width: 25%;
 }
 
-.chartDiv{
+.chartDiv {
     display: flex;
     margin-bottom: 10px;
 }
 
-.statHL{
+.statHL {
     text-align: center;
     text-decoration: underline;
+}
+
+.testHL {
+    text-align: center;
+    font-size: 1.3em;
+}
+
+.header {
+    top: 0;
+    position: fixed;
+    width: 100%;
+    background-color: #091f3f;
+    height: 70px;
+}
+
+.content {
+    width: 100%;
+    margin-top: 80px;
 }

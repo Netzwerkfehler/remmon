@@ -75,7 +75,7 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
                     ticks: {
                         suggestedMin: range.min,
                         suggestedMax: range.max,
-                        stepSize:     range.step
+                        stepSize: range.step
                     }
                 }]
             },
@@ -139,7 +139,7 @@ function generatePieChart(elementId, title, yAxisName, unitString, labels, color
 
 function createDiv(id) {
     var divEl = document.createElement("div");
-    document.getElementsByTagName("body")[0].appendChild(divEl);
+    document.getElementById("contentDiv").appendChild(divEl);
     divEl.id = id;
     divEl.classList = "chartDiv";
     return divEl;
@@ -149,7 +149,7 @@ function insertHeadline(text) {
     var hl = document.createElement("h1");
     hl.textContent = text;
     hl.classList = "statHL";
-    document.getElementsByTagName("body")[0].appendChild(hl);
+    document.getElementById("contentDiv").appendChild(hl);
 }
 
 function wrap(element) {
@@ -158,8 +158,21 @@ function wrap(element) {
     return div;
 }
 
+function createDataHolder(id, text) {
+    var el = document.getElementById(id);
+    if (el) {
+        el.textContent = text;
+    } else {
+        var hl = document.createElement("h1");
+        hl.id = id;
+        hl.textContent = text;
+        hl.classList = "statHL";
+        document.getElementById("contentDiv").appendChild(hl);
+    }
+}
+
 function createChartWrapper(id, classes, parent) {
-    var target = parent || document.getElementsByTagName("body")[0];
+    var target = parent || document.getElementById("contentDiv");
 
     var divEl = document.createElement("div");
     divEl.classList = classes;
@@ -171,23 +184,23 @@ function createChartWrapper(id, classes, parent) {
 }
 
 function formatTimeDuration(seconds_) {
-	var builder = "";
+    var builder = "";
 
-	var seconds = Math.floor(seconds_) % 60
-	var minutes = Math.floor(seconds_ / 60) % 60
-	var hours   = Math.floor(seconds_ / 60 / 60) % 24
-	var days    = Math.floor(seconds_ / 60 / 60 / 24)
+    var seconds = Math.floor(seconds_) % 60
+    var minutes = Math.floor(seconds_ / 60) % 60
+    var hours = Math.floor(seconds_ / 60 / 60) % 24
+    var days = Math.floor(seconds_ / 60 / 60 / 24)
 
-	if (days > 0) {
-		builder += days + "d ";
-	}
-	if (hours > 0) {
-		builder += hours + "h "
-	}
-	if (minutes > 0) {
-		builder += minutes + "m ";
-	}
-	builder += seconds + "s";
+    if (days > 0) {
+        builder += days + "d ";
+    }
+    if (hours > 0) {
+        builder += hours + "h "
+    }
+    if (minutes > 0) {
+        builder += minutes + "m ";
+    }
+    builder += seconds + "s";
 
     return builder;
 }

@@ -301,17 +301,9 @@ var list DynArray
 var datasets []DataObject
 
 func main() {
-	data := readCurrentData()
-	fmt.Println(data)
-
-	// jsonData, err := json.Marshal(data)
-	// handleError(err)
-	// fmt.Println(string(jsonData))
-	// return
-
 	fmt.Println("Starting...")
 	var portFlag = flag.Int("port", 1510, "Port the webserver will be running on")
-	var delayFlag = flag.Int("delay", 5, "Seconds between getting data")
+	var delayFlag = flag.Int("delay", 15, "Seconds between getting data")
 	var entriesFlag = flag.Int("entries", 50, "Amout of entries that will be stored in the memory")
 	flag.Parse()
 
@@ -323,21 +315,21 @@ func main() {
 
 	list = DynArray{list: make([]DataObject, entries)}
 	datasets = make([]DataObject, 0, entries)
-	if false {
-		go func() {
-			for {
-				readData()
-				time.Sleep(time.Duration(delay) * time.Second)
-			}
-		}()
-	}
-
+	// if false {
 	go func() {
-		for i := 0; i < 5; i++ {
+		for {
 			readData()
-			time.Sleep(time.Duration(3) * time.Second)
+			time.Sleep(time.Duration(delay) * time.Second)
 		}
 	}()
+	// }
+
+	// go func() {
+	// 	for i := 0; i < 5; i++ {
+	// 		readData()
+	// 		time.Sleep(time.Duration(3) * time.Second)
+	// 	}
+	// }()
 
 	http.HandleFunc("/test", testHandler)
 	http.HandleFunc("/gethwdata", getHardwareData)

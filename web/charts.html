@@ -10,7 +10,14 @@
 </head>
 
 <body>
-    <h1>Hardware Statistics</h1>
+    <div class="header">
+        <!-- //TODO: put more stuff into the header: value count, uptime-->
+        <h1>Hardware Statistics</h1>
+        <input type="button" value="Update" style="position: fixed;top:0;" onclick="refillCharts();">
+    </div>
+
+    <div id="contentDiv" class="content"><!--will be filled with generated content--></div>
+
     <script>
         var dataSource = {
             values: [],
@@ -118,39 +125,76 @@
             getUptime: function () {
                 var objArr = this.getValues();
                 return objArr[objArr.length - 1].system.uptime;
+            },
+            getValueCount: function () {
+                return this.getValues().length;
+            },
+            clearCache: function () {
+                //this.getValues() will request new values on next call
+                this.values = [];
             }
         }
 
         insertHeadline("RAM");
         var ramDiv = createDiv("ram");
         var ramData = dataSource.getRAMData();
-        generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
-        generatePieChart(createChartWrapper("ramPirChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+        var ramChart = generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
+        var ramPieChart = generatePieChart(createChartWrapper("ramPirChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
 
         insertHeadline("CPU");
         var cpuDiv = createDiv("cpu");
-        generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData(), { min: 0, max: 100, step: 10 });
+        var cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData(), { min: 0, max: 100, step: 10 });
 
+        var partCharts = [];
+        var partPieCharts = [];
         for (var i = 0; i < dataSource.getPartitionCount(); i++) {
             insertHeadline("Disk " + dataSource.getPartitionName(i));
             var partitionDiv = createDiv("partition" + i);
             var pData = dataSource.getPartitionData(i);
-            generateChart(createChartWrapper("partitionChart" + i, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(i), { min: 0, max: pData.max, step: 50 });
-            generatePieChart(createChartWrapper("partitionPieChart" + i, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+            var partChart = generateChart(createChartWrapper("partitionChart" + i, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(i), { min: 0, max: pData.max, step: 50 });
+            partCharts.push(partChart);
+            var partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + i, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+            partPieCharts.push(partPieChart);
         }
 
         insertHeadline("Network");
         var dlDiv = createDiv("download");
-        generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", dataSource.getDownload(), { min: 0, max: 0, step: 0.5 });
+        var dlChart = generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", dataSource.getDownload(), { min: 0, max: 0, step: 0.5 });
         var ulDiv = createDiv("upload");
-        generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", dataSource.getUpload(), { min: 0, max: 0, step: 0.1 });
+        var ulChart = generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", dataSource.getUpload(), { min: 0, max: 0, step: 0.1 });
 
         insertHeadline("Processes");
         var procDiv = createDiv("processes");
-        generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", dataSource.getProcesses(), { min: 0, max: 0, step: 10 });
+        var procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", dataSource.getProcesses(), { min: 0, max: 0, step: 10 });
 
-        insertHeadline("Uptime");
-        insertHeadline(formatTimeDuration(dataSource.getUptime()));
+        insertHeadline("Other");
+        createDataHolder("uptime", "Uptime: " + formatTimeDuration(dataSource.getUptime()));
+        createDataHolder("values", "Values: " + dataSource.getValueCount());
+
+        function refillCharts() {
+            dataSource.clearCache();
+            setChartData(this.ramChart, dataSource.getRAMUsage());
+            setChartData(this.ramPieChart, dataSource.getRAMData().data);
+            setChartData(this.cpuChart, dataSource.getCPUData());
+
+            var parts = partCharts.length;
+            for (var i = 0; i < parts; i++) {
+                setChartData(partCharts[i], dataSource.getPartitionUsage(i));
+                setChartData(partPieCharts[i], dataSource.getPartitionData(i).data);
+            }
+
+            setChartData(this.dlChart, dataSource.getDownload());
+            setChartData(this.ulChart, dataSource.getUpload());
+            setChartData(this.procChart, dataSource.getProcesses());
+
+            createDataHolder("uptime", "Uptime: " + formatTimeDuration(dataSource.getUptime()));
+            createDataHolder("values", "Values: " + dataSource.getValueCount());
+        }
+
+        function setChartData(chart, data) {
+            chart.data.datasets[0].data = data;
+            chart.update();
+        }
     </script>
 </body>
 
