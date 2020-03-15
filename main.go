@@ -41,11 +41,6 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 	handleError(err)
 	fmt.Println(time.Since(startX))
 
-	//TODO: extremely slow > 1s
-	// cpuStat, err := cpu.Info() //CPU stats
-	// handleError(err)
-	fmt.Println(time.Since(startX))
-
 	percentage, err := cpu.Percent(0, false) //All core utilization stats
 	handleError(err)
 	fmt.Println(time.Since(startX))
@@ -60,10 +55,6 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 	interfStat, err := net.Interfaces() //get network interfaces
 	handleError(err)
 	fmt.Println(time.Since(startX))
-
-	// allInterfacesIO, err := net.IOCounters(true) //all net interfaces io stats
-	// handleError(err)
-	// fmt.Println(time.Since(startX))
 
 	combinedInterfaceIO, err := net.IOCounters(false) //combined net interfaces io stats
 	handleError(err)
@@ -100,21 +91,7 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 		html += "Total disk space: " + formatRound(byteToGB10(diskTotal), 0) + " GB<br>"
 		html += "Used disk space: " + formatRound(byteToGB10(diskUsed), 1) + " GB, " + formatRound(float64(diskUsed)/float64(diskTotal)*100, 2) + "%<br>"
 		html += "Free disk space: " + formatRound(byteToGB10(diskFree), 1) + " GB, " + formatRound(float64(diskFree)/float64(diskTotal)*100, 2) + "%<br>"
-
-		//TODO: seems buggy, test stuff
-		// ioCounters, err := disk.IOCounters(partitionName)
-		// handleError(err)
-		// for _, ioStat := range ioCounters {
-		// 	html += "<br><br>" + ioStat.String() + "<br><br>"
-		// }
 	}
-
-	html += "<h1>CPU</h1>"
-	// for _, cpu := range cpuStat {
-	// 	html += "Model Name: " + cpu.ModelName + "<br>"
-	// 	html += "VendorID: " + cpu.VendorID + "<br>"
-	// 	html += "Logical cores: " + formatInt(int64(cpu.Cores)) + "<br>"
-	// }
 
 	html += "CPU utilization: " + formatRound(percentage[0], 0) + "%<br>"
 	for idx, cpupercent := range allCores {
@@ -145,14 +122,7 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 		html += "<br><br>"
 	}
 
-	html += "<h1>Network traffic stats</h1>"
-
-	// html += "<br>Total Network Interfaces: " + strconv.Itoa(len(allInterfacesIO)) + "<br><br>"
-	// for _, io := range allInterfacesIO {
-	// 	html += formatNetIO(io) + "<br>"
-	// }
-
-	html += "<br>Total Stats:<br>"
+	html += "<br>Network Stats:<br>"
 	html += formatNetIO(combinedInterfaceIO[0])
 
 	html += "</body></html>"
@@ -164,10 +134,10 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 
 func formatNetIO(io net.IOCountersStat) string {
 	var ret string = "Name: " + io.Name + "<br>"
-	ret += "Sent: " + formatRound(byteToMB(io.BytesSent), 0) + " MB<br>"
-	ret += "Recv: " + formatRound(byteToMB(io.BytesRecv), 0) + " MB<br>"
-	// ret += "Packets Sent: " + formatUInt(io.PacketsSent) + "<br>"
-	// ret += "Packets Recv: " + formatUInt(io.PacketsRecv) + "<br>"
+	ret += "Data Sent: " + formatRound(byteToMB(io.BytesSent), 0) + " MB<br>"
+	ret += "Data Recv: " + formatRound(byteToMB(io.BytesRecv), 0) + " MB<br>"
+	ret += "Packets Sent: " + formatUInt(io.PacketsSent) + "<br>"
+	ret += "Packets Recv: " + formatUInt(io.PacketsRecv) + "<br>"
 	return ret
 }
 
@@ -175,10 +145,7 @@ func getDataRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("getDataRequest from: " + r.RemoteAddr)
 	switch r.Method {
 	case "GET":
-		// paramString := r.URL.RawQuery
-		// fmt.Fprint(w, "test")
-		// jsonData, err := json.Marshal(getData(5))
-		jsonData, err := json.Marshal(datasets)
+		jsonData, err := json.Marshal(list.GetList())
 		if err == nil {
 			fmt.Fprint(w, string(jsonData))
 		} else {
@@ -191,7 +158,8 @@ func getDataRequest(w http.ResponseWriter, r *http.Request) {
 
 func read(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("Read Request from: " + r.RemoteAddr)
-	datasets = append(datasets, readCurrentData())
+	list.Add(readCurrentData())
+	fmt.Fprintln(w, "Read OK")
 }
 
 func raw(w http.ResponseWriter, r *http.Request) {
@@ -288,17 +256,14 @@ func raw(w http.ResponseWriter, r *http.Request) {
 	fmt.Println(time.Since(startX))
 }
 
-func getData(entries uint) []DataObject {
-
-	return datasets[entries:]
-}
-
 func testHandler(w http.ResponseWriter, r *http.Request) {
 	w.Write([]byte("Test"))
 }
 
 func readCurrentData() DataObject {
-	fmt.Println("readCurrentData()")
+	fmt.Println("Reading data...")
+
+	start := time.Now()
 	vmStat, err := mem.VirtualMemory() // Physical Memory
 	handleError(err)
 	partitionsStat, err := disk.Partitions(true) //Partition List
@@ -324,12 +289,13 @@ func readCurrentData() DataObject {
 	dataset.CPU = CPUStats{percentage[0]}
 	dataset.System = SystemStats{hostStat.Uptime, hostStat.Procs}
 	dataset.Network = NetStats{combinedInterfaceIO[0].BytesSent, combinedInterfaceIO[0].BytesRecv}
+	fmt.Print("Took: ")
+	fmt.Println(time.Since(start))
 	return dataset
 }
 
 func readData() {
-	fmt.Println("readData()")
-	datasets = append(datasets, readCurrentData())
+	list.Add(readCurrentData())
 }
 
 const (
@@ -391,24 +357,27 @@ func formatTimeDuration(duration time.Duration) string {
 	return builder.String()
 }
 
-var list DynArray
-var datasets []DataObject
+var list CappedList
 
 func main() {
 	fmt.Println("Starting...")
 	var portFlag = flag.Int("port", 1510, "Port the webserver will be running on")
-	var delayFlag = flag.Int("delay", 15, "Seconds between getting data")
-	var entriesFlag = flag.Int("entries", 50, "Amout of entries that will be stored in the memory")
+	var delayFlag = flag.Int("delay", 10, "Seconds between getting data")
+	var entriesFlag = flag.Int("entries", 1000, "Amount of entries that will be stored in the memory")
 	flag.Parse()
 
 	var delay = *delayFlag
 	var entries = *entriesFlag
 	var port = *portFlag
 
-	fmt.Printf("Running on Port %v\n", port)
+	//maximum amount of time that can be shown in a chart
+	fmt.Println("Max displayable time: " + formatTimeDuration(time.Duration(entries*delay)*time.Second))
+	var dataPerMin = 60 / delay
+	fmt.Printf("Datasets per minute: %v \n", dataPerMin)
 
-	list = DynArray{list: make([]DataObject, entries)}
-	datasets = make([]DataObject, 0, entries)
+	fmt.Printf("Running on Port %v with max %v entries at %vs polling rate\n", port, entries, delay)
+
+	list = CappedList{list: make([]DataObject, 0, entries), limit: entries}
 
 	go func() {
 		for {

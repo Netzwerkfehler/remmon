@@ -13,10 +13,24 @@
     <div class="header">
         <!-- //TODO: put more stuff into the header: value count, uptime-->
         <h1>Hardware Statistics</h1>
-        <input type="button" value="Update" style="position: fixed;top:0;" onclick="refillCharts();">
+        <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page" onclick="refillCharts();">
+        
+        <!--//TODO: stuff-->
+        <div id="autoUpdateDiv" class="autoUpdateDiv" style="display: none;">
+            <label title="Check to automatically update the charts">
+                <input type="checkbox" class="autoUpdateCheckbox" onclick="console.log('click')">Auto update every
+            </label>
+            <input type="number" value="10" style="width: 40px" class="autoUpdateRate" onclick="console.log('What?')">
+            <select onchange="console.log('hi')">
+                <option value="seconds">Seconds</option>
+                <option value="minutes" selected="selected">Minutes</option>
+            </select>
+        </div>
     </div>
 
-    <div id="contentDiv" class="content"><!--will be filled with generated content--></div>
+    <div id="contentDiv" class="content">
+        <!--will be filled with generated content-->
+    </div>
 
     <script>
         var dataSource = {

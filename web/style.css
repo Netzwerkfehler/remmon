@@ -3,7 +3,7 @@ body {
     background-color: #0f1620;
     color: white;
     margin: 0;
-    padding: 5px;
+    padding: 0;
 }
 
 h1 {
@@ -52,10 +52,41 @@ h1 {
 }
 
 .content {
-    width: 100%;
+    width: 99%;
     margin-top: 80px;
+    padding: 5px;
 }
 
-a{
+a {
     color:white;
+}
+
+input[type=button] {
+    color: white;
+    background-color: #303030;
+    border: 2px solid silver;
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+input[type=button]:hover {
+    color: lightgray;
+    background-color: #202020;
+}
+
+input[type=button]:active {
+    border: 2px solid lightskyblue;
+}
+
+.updateButton {
+    font-size: 1.2em;
+    position: fixed;
+    top: 0;
+    margin: 10px;
+}
+
+.autoUpdateDiv {
+    position: fixed;
+    top: 45px;
+    margin-left: 10px;
 }

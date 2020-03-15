@@ -59,7 +59,7 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
                         displayFormats: {
                             // second: "HH:mm:ss",
                             minute: "HH:mm",
-                            hour: "HH"
+                            hour: "HH:mm"
                         }
                     }
                 }],
