@@ -22,7 +22,7 @@ func handleError(err error) {
 		fmt.Println("An Error ouccured")
 		fmt.Println(err)
 		fmt.Println(err.Error())
-		panic(err)
+		//panic(err)
 	}
 }
 

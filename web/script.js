@@ -152,12 +152,6 @@ function insertHeadline(text) {
     document.getElementById("contentDiv").appendChild(hl);
 }
 
-function wrap(element) {
-    var div = document.createElement("div");
-    div.appendChild(element);
-    return div;
-}
-
 function createDataHolder(id, text) {
     var el = document.getElementById(id);
     if (el) {

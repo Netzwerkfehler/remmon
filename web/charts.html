@@ -13,17 +13,19 @@
     <div class="header">
         <!-- //TODO: put more stuff into the header: value count, uptime-->
         <h1>Hardware Statistics</h1>
-        <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page" onclick="refillCharts();">
-        
-        <!--//TODO: stuff-->
-        <div id="autoUpdateDiv" class="autoUpdateDiv" style="display: none;">
+        <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page"
+            onclick="refillCharts();">
+
+        <div id="autoUpdateDiv" class="autoUpdateDiv">
             <label title="Check to automatically update the charts">
-                <input type="checkbox" class="autoUpdateCheckbox" onclick="console.log('click')">Auto update every
+                <input type="checkbox" class="autoUpdateCheckbox" id="autoUpdateCheckbox"
+                    onclick="setUpdateRate();">Auto update every
             </label>
-            <input type="number" value="10" style="width: 40px" class="autoUpdateRate" onclick="console.log('What?')">
-            <select onchange="console.log('hi')">
-                <option value="seconds">Seconds</option>
-                <option value="minutes" selected="selected">Minutes</option>
+            <input type="number" min="1" value="10" style="width: 40px" id="updateRate" class="autoUpdateRate"
+                onclick="setUpdateRate();">
+            <select id="updateRateUnit" onchange="setUpdateRate();">
+                <option value="sec">Seconds</option>
+                <option value="min" selected="selected">Minutes</option>
             </select>
         </div>
     </div>
@@ -80,7 +82,7 @@
                 }
                 return ret;
             },
-            getPartitionUsage: function (index) {
+            getPartitionUsage: function (index) {//TODO: index not unique, use drive letter?
                 var ret = [];
                 var objArr = this.getValues();
                 for (var i = 0; i < objArr.length; i++) {
@@ -102,7 +104,7 @@
                 var objArr = this.getValues();
                 return objArr[objArr.length - 1].partitions.length;
             },
-            getPartitionName: function (index) {
+            getPartitionName: function (index) {//TODO: find TRUE max value (the current value isn't always useful)
                 var objArr = this.getValues();
                 return objArr[objArr.length - 1].partitions[index].name;
             },
@@ -208,6 +210,33 @@
         function setChartData(chart, data) {
             chart.data.datasets[0].data = data;
             chart.update();
+        }
+
+        var updateTimer;
+
+        //sets and removes the auto update timer and delay
+        function setUpdateRate() {
+            var doAutoUpdate = document.getElementById("autoUpdateCheckbox");
+            var updateRateValue = document.getElementById("updateRate");
+            var updateRateUnit = document.getElementById("updateRateUnit");
+
+            if (doAutoUpdate.checked) {
+                updateTimer = setInterval(function () {
+                    refillCharts();
+                }, getDelayMS(updateRateValue.value, updateRateUnit.value));
+            } else {
+                clearInterval(updateTimer);
+            }
+        }
+
+        function getDelayMS(value, unit) {
+            if (unit === "sec") {
+                return value * 1000;
+            } else if (unit === "min") {
+                return value * 1000 * 60;
+            }
+            console.error("Unknown time unit: " + unit);
+            return -1;
         }
     </script>
 </body>
