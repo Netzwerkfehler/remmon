@@ -7,28 +7,33 @@
     <script src="scripts/Chart.min.js"></script>
     <link href="style.css" rel="stylesheet">
     <script src="script.js"></script>
+    <link rel="shortcut icon" href="favicon.ico">
 </head>
 
 <body>
     <div class="header">
         <!-- //TODO: put more stuff into the header: value count, uptime-->
-        <h1>Hardware Statistics</h1>
-        <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page"
-            onclick="refillCharts();">
-
-        <div id="autoUpdateDiv" class="autoUpdateDiv">
-            <label title="Check to automatically update the charts">
-                <input type="checkbox" class="autoUpdateCheckbox" id="autoUpdateCheckbox"
-                    onclick="setUpdateRate();">Auto update every
-            </label>
-            <input type="number" min="1" value="10" style="width: 40px" id="updateRate" class="autoUpdateRate"
-                onclick="setUpdateRate();">
-            <select id="updateRateUnit" onchange="setUpdateRate();">
-                <option value="sec">Seconds</option>
-                <option value="min" selected="selected">Minutes</option>
-            </select>
+        <div class="left">
+            <div id="uptime" class="hlData" title="Uptime of the monitored machine"></div>
+            <div id="values" class="hlData" title="Amount of datasets"></div>
         </div>
-    </div>
+        <div class="middle">
+            <h1 class="mainHL">Hardware Statistics</h1>
+        </div>
+        <div class="right">
+            <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page" onclick="refillCharts();">
+            <div id="autoUpdateDiv" class="autoUpdateDiv">
+                <label title="Check to automatically update the charts">
+                    <input type="checkbox" class="autoUpdateCheckbox" id="autoUpdateCheckbox" onclick="setUpdateRate();">Auto update every
+                </label>
+                <input type="number" min="1" value="10" class="updateRateIn" id="updateRate" class="autoUpdateRate" onclick="setUpdateRate();">
+                <select id="updateRateUnit" onchange="setUpdateRate();">
+                    <option value="sec">Seconds</option>
+                    <option value="min" selected="selected">Minutes</option>
+                </select>
+            </div>
+        </div>
+        </div>
 
     <div id="contentDiv" class="content">
         <!--will be filled with generated content-->
@@ -183,7 +188,6 @@
         var procDiv = createDiv("processes");
         var procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", dataSource.getProcesses(), { min: 0, max: 0, step: 10 });
 
-        insertHeadline("Other");
         createDataHolder("uptime", "Uptime: " + formatTimeDuration(dataSource.getUptime()));
         createDataHolder("values", "Values: " + dataSource.getValueCount());
 
