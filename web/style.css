@@ -48,14 +48,14 @@ h1 {
     position: fixed;
     width: 100%;
     background-color: #091f3f;
-    height: 70px;
+    height: 55px;
     padding: 5px;
     display: flex;
 }
 
 .content {
     width: 99%;
-    margin-top: 80px;
+    margin-top: 50px;
     padding: 5px;
 }
 

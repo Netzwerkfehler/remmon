@@ -186,6 +186,12 @@ func raw(w http.ResponseWriter, r *http.Request) {
 	hostStat, err := host.Info() // host Info
 	handleError(err)
 
+	// tempStats, err := host.SensorsTemperatures()
+	// handleError(err)
+
+	// userStats, err := host.Users()
+	// handleError(err)
+
 	interfStat, err := net.Interfaces() //get network interfaces
 	handleError(err)
 
@@ -237,6 +243,16 @@ func raw(w http.ResponseWriter, r *http.Request) {
 	for _, interf := range interfStat {
 		html += interf.String() + "<br>"
 	}
+
+	// html += "<h1>Temperatures</h1>"
+	// for _, tempStat := range tempStats {
+	// 	html += tempStat.String() + "<br>"
+	// }
+
+	// html += "<h1>Users</h1>"
+	// for _, userStat := range userStats {
+	// 	html += userStat.String() + "<br>"
+	// }
 
 	html += "<h1>Network traffic stats</h1>"
 

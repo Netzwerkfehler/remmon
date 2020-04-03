@@ -12,7 +12,6 @@
 
 <body>
     <div class="header">
-        <!-- //TODO: put more stuff into the header: value count, uptime-->
         <div class="left">
             <div id="uptime" class="hlData" title="Uptime of the monitored machine"></div>
             <div id="values" class="hlData" title="Amount of datasets"></div>
@@ -92,8 +91,12 @@
                 var objArr = this.getValues();
                 for (var i = 0; i < objArr.length; i++) {
                     var obj = objArr[i];
+                    var p = obj.partitions[index];
+                    if (p === undefined) {//TODO: map with drive letters NOW!
+                        continue;
+                    }
                     var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: this.byteToGB(obj.partitions[index].used) });
+                    ret.push({ t: unixTime, y: this.byteToGB(p.used) });
                 }
                 return ret;
             },
