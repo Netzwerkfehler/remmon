@@ -1,23 +1,3 @@
-function getData() {
-    var values = [];
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4 && this.status == 200) {
-            var objectsArray = JSON.parse(this.responseText);
-            for (var i = 0; i < objectsArray.length; i++) {
-                var dataObject = objectsArray[i];
-                var unixTime = moment(dataObject.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                values.push({ t: unixTime, y: dataObject.ram.used / 1024 / 1024 / 1024 });
-                // values.push({t: unixTime, y: obj.ram.used});
-            }
-            return values
-        }
-    };
-    xhttp.open("GET", "/getdata", false);
-    xhttp.send();
-    return values;
-}
-
 function generateChart(elementId, title, yAxisName, unitString, chartData, range) {
     var cfg = {
         data: {

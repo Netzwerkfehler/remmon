@@ -86,35 +86,51 @@
                 }
                 return ret;
             },
-            getPartitionUsage: function (index) {//TODO: index not unique, use drive letter?
+            getPartitionUsage: function (name) {
                 var ret = [];
-                var objArr = this.getValues();
-                for (var i = 0; i < objArr.length; i++) {
-                    var obj = objArr[i];
-                    var p = obj.partitions[index];
-                    if (p === undefined) {//TODO: map with drive letters NOW!
-                        continue;
+                var values = this.getValues();
+                for (var i = 0; i < values.length; i++) {
+                    var obj = values[i];
+                    var parts = obj.partitions;
+                    for (var j = 0; j < parts.length; j++) {
+                        var part = parts[j];
+                        if (part.name === name) {
+                            var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+                            ret.push({ t: unixTime, y: this.byteToGB(part.used) });
+                        }
                     }
-                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: this.byteToGB(p.used) });
                 }
                 return ret;
             },
-            getPartitionData: function (index) {
+            getPartitionData: function (name) {
                 var ret = {};
-                var objArr = this.getValues();
-                var current = objArr[objArr.length - 1];
-                ret.data = [current.partitions[index].free / 1024 / 1024 / 1024, current.partitions[index].used / 1024 / 1024 / 1024];
-                ret.max = current.partitions[index].total / 1024 / 1024 / 1024;
+
+                var values = this.getValues();
+                for (var i = values.length - 1; i >= 0; i--) {//reversed because we need the lastest values
+                    var parts = values[i].partitions;
+                    for (var j = 0; j < parts.length; j++) {
+                        var part = parts[j];
+                        if (part.name === name) {
+                            ret.data = [part.free / 1024 / 1024 / 1024, part.used / 1024 / 1024 / 1024];
+                            ret.max = part.total / 1024 / 1024 / 1024;
+                            return ret;
+                        }
+                    }
+                }
+            },
+            getAllPartitionNames: function () {//returns a list of known partition names/drive letters
+                var ret = [];
+                var values = this.getValues();
+                for (var i = 0; i < values.length; i++) {
+                    var parts = values[i].partitions;
+                    for (var j = 0; j < parts.length; j++) {
+                        var name = parts[j].name;
+                        if (ret.indexOf(name) === -1) {
+                            ret.push(name);
+                        }
+                    }
+                }
                 return ret;
-            },
-            getPartitionCount: function () {
-                var objArr = this.getValues();
-                return objArr[objArr.length - 1].partitions.length;
-            },
-            getPartitionName: function (index) {//TODO: find TRUE max value (the current value isn't always useful)
-                var objArr = this.getValues();
-                return objArr[objArr.length - 1].partitions[index].name;
             },
             getDownload: function () {
                 var ret = [];
@@ -169,16 +185,16 @@
         var cpuDiv = createDiv("cpu");
         var cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData(), { min: 0, max: 100, step: 10 });
 
-        var partCharts = [];
-        var partPieCharts = [];
-        for (var i = 0; i < dataSource.getPartitionCount(); i++) {
-            insertHeadline("Disk " + dataSource.getPartitionName(i));
-            var partitionDiv = createDiv("partition" + i);
-            var pData = dataSource.getPartitionData(i);
-            var partChart = generateChart(createChartWrapper("partitionChart" + i, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(i), { min: 0, max: pData.max, step: 50 });
-            partCharts.push(partChart);
-            var partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + i, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
-            partPieCharts.push(partPieChart);
+        var pChartBlocks = [];
+        var pNames = dataSource.getAllPartitionNames();
+        for (var i = 0; i < pNames.length; i++) {
+            var pName = pNames[i];
+            insertHeadline("Disk " + pName);
+            var partitionDiv = createDiv("partition" + pName);
+            var pData = dataSource.getPartitionData(pName);
+            var partChart = generateChart(createChartWrapper("partitionChart" + pName, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(pName), { min: 0, max: pData.max, step: 50 });
+            var partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+            pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
         }
 
         insertHeadline("Network");
@@ -200,10 +216,10 @@
             setChartData(this.ramPieChart, dataSource.getRAMData().data);
             setChartData(this.cpuChart, dataSource.getCPUData());
 
-            var parts = partCharts.length;
-            for (var i = 0; i < parts; i++) {
-                setChartData(partCharts[i], dataSource.getPartitionUsage(i));
-                setChartData(partPieCharts[i], dataSource.getPartitionData(i).data);
+            for(var i = 0; i < pChartBlocks.length; i++){
+                var chartBlock = pChartBlocks[i];
+                setChartData(chartBlock.lineChart, dataSource.getPartitionUsage(chartBlock.name));
+                setChartData(chartBlock.pieChart, dataSource.getPartitionData(chartBlock.name).data);
             }
 
             setChartData(this.dlChart, dataSource.getDownload());
