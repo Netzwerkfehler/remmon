@@ -132,7 +132,7 @@ function insertHeadline(text) {
     document.getElementById("contentDiv").appendChild(hl);
 }
 
-function createDataHolder(id, text) {
+function createOrUpdateDataHolder(id, text) {
     var el = document.getElementById(id);
     if (el) {
         el.textContent = text;
@@ -182,7 +182,6 @@ function formatTimeDuration(seconds_) {
 class DataParser {
 
     constructor(jsonData) {
-        console.log(jsonData);
         if (jsonData === undefined) {
             throw "No data";
         }
@@ -207,18 +206,18 @@ class DataParser {
     }
 
     parse() {
-        const objects = this.dataObjects.length;
-        if (objects === 0) {
+        const objectCount = this.dataObjects.length;
+        if (objectCount === 0) {
             throw "No datasets";
         }
 
-        this.valueCount = objects;
+        this.valueCount = objectCount;
 
-        for (var i = 0; i < objects; i++) {
+        for (var i = 0; i < objectCount; i++) {
             const dataObject = this.dataObjects[i];
             const unixTime = moment(dataObject.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
 
-            this.ramStats.push({ t: unixTime, y: dataObject.ram.used / 1024 });
+            this.ramStats.push({ t: unixTime, y:  this.byteToGB(dataObject.ram.used) });
             this.cpuStats.push({ t: unixTime, y: dataObject.cpu.utilization });
 
             this.processCount.push({ t: unixTime, y: dataObject.system.processes });
@@ -242,10 +241,10 @@ class DataParser {
             }
         }
 
-        const lastObject = this.dataObjects[objects - 1];
+        const lastObject = this.dataObjects[objectCount - 1];
 
-        this.ramData.data = [lastObject.ram.free / 1024, lastObject.ram.used / 1024];
-        this.ramData.max = lastObject.ram.total / 1024;
+        this.ramData.data = [this.byteToGB(lastObject.ram.free), this.byteToGB(lastObject.ram.used)];
+        this.ramData.max = this.byteToGB(lastObject.ram.total);
 
         this.uptime = lastObject.system.uptime;
     }

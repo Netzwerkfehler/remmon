@@ -20,7 +20,7 @@
             <h1 class="mainHL">Hardware Statistics</h1>
         </div>
         <div class="right">
-            <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page" onclick="refillCharts();">
+            <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page" onclick="updateCharts();">
             <div id="autoUpdateDiv" class="autoUpdateDiv">
                 <label title="Check to automatically update the charts">
                     <input type="checkbox" class="autoUpdateCheckbox" id="autoUpdateCheckbox" onclick="setUpdateRate();">Auto update every
@@ -32,85 +32,92 @@
                 </select>
             </div>
         </div>
-        </div>
+    </div>
 
     <div id="contentDiv" class="content">
         <!--will be filled with generated content-->
     </div>
 
     <script>
+        requestData(handleResponse);
 
-    var xhttp = new XMLHttpRequest();
-    xhttp.onreadystatechange = function () {
-        if (this.readyState == 4) {
-            console.log("req OK");
-            if(this.status == 200){
-                handleResponse(this.responseText);
-            }else{
-                alert("getdata failed " + this.status)
+        function requestData(handlerFunc){
+            var xhttp = new XMLHttpRequest();
+            xhttp.onreadystatechange = function () {
+                if (this.readyState == 4) {
+                    if (this.status == 200) {
+                        handlerFunc(this.responseText);
+                    } else {
+                        alert("getdata failed " + this.status);
+                    }
+                }
+            };
+            xhttp.open("GET", "/getdata", true);
+            xhttp.send();
+        }
+
+        function handleResponse(jsonData) {
+            const parser = new DataParser(jsonData);
+
+            insertHeadline("RAM");
+            const ramDiv = createDiv("ram");
+            const ramData = parser.getRAMData();
+            this.ramChart = generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
+            this.ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+
+            insertHeadline("CPU");
+            const cpuDiv = createDiv("cpu");
+            this.cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUStats(), { min: 0, max: 100, step: 10 });
+
+            this.pChartBlocks = [];
+            var pNames = parser.getAllPartitionNames();
+            for (var i = 0; i < pNames.length; i++) {
+                var pName = pNames[i];
+                insertHeadline("Disk " + pName);
+                const partitionDiv = createDiv("partition" + pName);
+                const pData = parser.getPartitionData(pName);
+                const partChart = generateChart(createChartWrapper("partitionChart" + pName, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionStats(pName), { min: 0, max: pData.max, step: 50 });
+                const partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+                pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
             }
-        }
-    };
-    xhttp.open("GET", "/getdata", true);
-    xhttp.send();
 
-    function handleResponse(jsonData) {
-        console.log(jsonData);
-        const parser = new DataParser(this.responseText);
+            insertHeadline("Network");
+            const dlDiv = createDiv("download");
+            this.dlChart = generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
+            const ulDiv = createDiv("upload");
+            this.ulChart = generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
 
-        insertHeadline("RAM");
-        var ramDiv = createDiv("ram");
-        var ramData = parser.getRAMData();
-        var ramChart = generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
-        var ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+            insertHeadline("Processes");
+            const procDiv = createDiv("processes");
+            this.procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", parser.getProcessCount(), { min: 0, max: 0, step: 10 });
 
-        insertHeadline("CPU");
-        var cpuDiv = createDiv("cpu");
-        var cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUData(), { min: 0, max: 100, step: 10 });
-
-        var pChartBlocks = [];
-        var pNames = parser.getAllPartitionNames();
-        for (var i = 0; i < pNames.length; i++) {
-            var pName = pNames[i];
-            insertHeadline("Disk " + pName);
-            var partitionDiv = createDiv("partition" + pName);
-            var pData = parser.getPartitionData(pName);
-            var partChart = generateChart(createChartWrapper("partitionChart" + pName, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionUsage(pName), { min: 0, max: pData.max, step: 50 });
-            var partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
-            pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
+            createOrUpdateDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
+            createOrUpdateDataHolder("values", "Values: " + parser.getValueCount());
         }
 
-        insertHeadline("Network");
-        var dlDiv = createDiv("download");
-        var dlChart = generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
-        var ulDiv = createDiv("upload");
-        var ulChart = generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
+        function updateCharts(){
+            requestData(refillCharts);
+        }
 
-        insertHeadline("Processes");
-        var procDiv = createDiv("processes");
-        var procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", parser.getProcesses(), { min: 0, max: 0, step: 10 });
+        function refillCharts(jsonData) {
+            const parser = new DataParser(jsonData);
 
-        createDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
-        createDataHolder("values", "Values: " + parser.getValueCount());
-    }
-        //TODO: rewrite for async model
-        function refillCharts() {
             setChartData(this.ramChart, parser.getRAMUsage());
             setChartData(this.ramPieChart, parser.getRAMData().data);
-            setChartData(this.cpuChart, parser.getCPUData());
+            setChartData(this.cpuChart, parser.getCPUStats());
 
-            for(var i = 0; i < pChartBlocks.length; i++){
+            for (var i = 0; i < pChartBlocks.length; i++) {
                 var chartBlock = pChartBlocks[i];
-                setChartData(chartBlock.lineChart, parser.getPartitionUsage(chartBlock.name));
+                setChartData(chartBlock.lineChart, parser.getPartitionStats(chartBlock.name));
                 setChartData(chartBlock.pieChart, parser.getPartitionData(chartBlock.name).data);
             }
 
             setChartData(this.dlChart, parser.getDownload());
             setChartData(this.ulChart, parser.getUpload());
-            setChartData(this.procChart, parser.getProcesses());
+            setChartData(this.procChart, parser.getProcessCount());
 
-            createDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
-            createDataHolder("values", "Values: " + parser.getValueCount());
+            createOrUpdateDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
+            createOrUpdateDataHolder("values", "Values: " + parser.getValueCount());
         }
 
         function setChartData(chart, data) {
@@ -128,7 +135,7 @@
 
             if (doAutoUpdate.checked) {
                 updateTimer = setInterval(function () {
-                    refillCharts();
+                    updateCharts();
                 }, getDelayMS(updateRateValue.value, updateRateUnit.value));
             } else {
                 clearInterval(updateTimer);
