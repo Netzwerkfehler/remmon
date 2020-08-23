@@ -178,3 +178,123 @@ function formatTimeDuration(seconds_) {
 
     return builder;
 }
+
+class DataParser {
+
+    constructor(jsonData) {
+        console.log(jsonData);
+        if (jsonData === undefined) {
+            throw "No data";
+        }
+        this.dataObjects = JSON.parse(jsonData);
+        this.ramStats = [];
+
+        this.ramData = {};
+
+        this.cpuStats = [];
+
+        this.partitionStats = new Map();
+        this.partitionData = new Map();
+
+        this.download = [];
+        this.upload = [];
+
+        this.processCount = [];
+        this.uptime = 0;
+        this.valueCount = 0;
+
+        this.parse();
+    }
+
+    parse() {
+        const objects = this.dataObjects.length;
+        if (objects === 0) {
+            throw "No datasets";
+        }
+
+        this.valueCount = objects;
+
+        for (var i = 0; i < objects; i++) {
+            const dataObject = this.dataObjects[i];
+            const unixTime = moment(dataObject.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+
+            this.ramStats.push({ t: unixTime, y: dataObject.ram.used / 1024 });
+            this.cpuStats.push({ t: unixTime, y: dataObject.cpu.utilization });
+
+            this.processCount.push({ t: unixTime, y: dataObject.system.processes });
+
+            this.download.push({ t: unixTime, y: this.byteToGB(dataObject.network.recv) });
+            this.upload.push({ t: unixTime, y: this.byteToGB(dataObject.network.sent) });
+
+            const parts = dataObject.partitions;
+            for (var j = 0; j < parts.length; j++) {
+                const part = parts[j];
+                const pName = part.name;
+
+                const pStats = this.partitionStats.has(pName) ? this.partitionStats.get(pName) : [];
+                pStats.push({ t: unixTime, y: this.byteToGB(part.used) });
+                this.partitionStats.set(pName, pStats);
+
+                var pData = {};
+                pData.data = [this.byteToGB(part.free), this.byteToGB(part.used)];
+                pData.max = this.byteToGB(part.total);
+                this.partitionData.set(pName, pData);
+            }
+        }
+
+        const lastObject = this.dataObjects[objects - 1];
+
+        this.ramData.data = [lastObject.ram.free / 1024, lastObject.ram.used / 1024];
+        this.ramData.max = lastObject.ram.total / 1024;
+
+        this.uptime = lastObject.system.uptime;
+    }
+
+    getRAMUsage() {
+        return this.ramStats;
+    }
+
+    getRAMData() {
+        return this.ramData;
+    }
+
+    getCPUStats() {
+        return this.cpuStats;
+    }
+
+    getPartitionStats(name) {
+        return this.partitionStats.get(name);
+    }
+
+    getPartitionData(name) {
+        return this.partitionData.get(name);
+    }
+
+    getAllPartitionNames() {
+        return Array.from(this.partitionStats.keys());
+    }
+
+    getDownload(){
+        return this.download;
+    }
+
+    getUpload(){
+        return this.upload;
+    }
+
+    getProcessCount(){
+        return this.processCount;
+    }
+
+    getUptime(){
+        return this.uptime;
+    }
+
+    getValueCount(){
+        return this.valueCount;
+    }
+
+    byteToGB(bytes) {
+        return bytes / 1024 / 1024 / 1024;
+    }
+}

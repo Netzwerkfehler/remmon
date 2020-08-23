@@ -39,195 +39,78 @@
     </div>
 
     <script>
-        var dataSource = {
-            values: [],
-            byteToGB: function (bytes) {
-                return bytes / 1024 / 1024 / 1024;
-            },
-            getValues: function () {
-                if (this.values.length > 0) {
-                    return this.values;
-                }
-                var xhttp = new XMLHttpRequest();
-                xhttp.onreadystatechange = function () {
-                    if (this.readyState == 4 && this.status == 200) {
-                        dataSource.values = JSON.parse(this.responseText);
-                    }
-                };
-                xhttp.open("GET", "/getdata", false);
-                xhttp.send();
-                return this.values;
-            },
-            getRAMUsage: function () {
-                var ret = [];
-                var values = this.getValues();
-                for (var i = 0; i < values.length; i++) {
-                    var obj = values[i];
-                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: obj.ram.used / 1024 / 1024 / 1024 });
-                }
-                return ret;
-            },
-            getRAMData: function () {
-                var ret = {};
-                var objArr = this.getValues();
-                var current = objArr[objArr.length - 1];
-                ret.data = [current.ram.free / 1024 / 1024 / 1024, current.ram.used / 1024 / 1024 / 1024];
-                ret.max = current.ram.total / 1024 / 1024 / 1024;
-                return ret;
-            },
-            getCPUData: function () {
-                var ret = [];
-                var objArr = this.getValues();
-                for (var i = 0; i < objArr.length; i++) {
-                    var obj = objArr[i];
-                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: obj.cpu.utilization });
-                }
-                return ret;
-            },
-            getPartitionUsage: function (name) {
-                var ret = [];
-                var values = this.getValues();
-                for (var i = 0; i < values.length; i++) {
-                    var obj = values[i];
-                    var parts = obj.partitions;
-                    for (var j = 0; j < parts.length; j++) {
-                        var part = parts[j];
-                        if (part.name === name) {
-                            var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                            ret.push({ t: unixTime, y: this.byteToGB(part.used) });
-                        }
-                    }
-                }
-                return ret;
-            },
-            getPartitionData: function (name) {
-                var ret = {};
 
-                var values = this.getValues();
-                for (var i = values.length - 1; i >= 0; i--) {//reversed because we need the lastest values
-                    var parts = values[i].partitions;
-                    for (var j = 0; j < parts.length; j++) {
-                        var part = parts[j];
-                        if (part.name === name) {
-                            ret.data = [part.free / 1024 / 1024 / 1024, part.used / 1024 / 1024 / 1024];
-                            ret.max = part.total / 1024 / 1024 / 1024;
-                            return ret;
-                        }
-                    }
-                }
-            },
-            getAllPartitionNames: function () {//returns a list of known partition names/drive letters
-                var ret = [];
-                var values = this.getValues();
-                for (var i = 0; i < values.length; i++) {
-                    var parts = values[i].partitions;
-                    for (var j = 0; j < parts.length; j++) {
-                        var name = parts[j].name;
-                        if (ret.indexOf(name) === -1) {
-                            ret.push(name);
-                        }
-                    }
-                }
-                return ret;
-            },
-            getDownload: function () {
-                var ret = [];
-                var values = this.getValues();
-                for (var i = 0; i < values.length; i++) {
-                    var obj = values[i];
-                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: obj.network.recv / 1024 / 1024 / 1024 });
-                }
-                return ret;
-            },
-            getUpload: function () {
-                var ret = [];
-                var values = this.getValues();
-                for (var i = 0; i < values.length; i++) {
-                    var obj = values[i];
-                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: obj.network.sent / 1024 / 1024 / 1024 });
-                }
-                return ret;
-            },
-            getProcesses: function () {
-                var ret = [];
-                var values = this.getValues();
-                for (var i = 0; i < values.length; i++) {
-                    var obj = values[i];
-                    var unixTime = moment(obj.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
-                    ret.push({ t: unixTime, y: obj.system.processes });
-                }
-                return ret;
-            },
-            getUptime: function () {
-                var objArr = this.getValues();
-                return objArr[objArr.length - 1].system.uptime;
-            },
-            getValueCount: function () {
-                return this.getValues().length;
-            },
-            clearCache: function () {
-                //this.getValues() will request new values on next call
-                this.values = [];
+    var xhttp = new XMLHttpRequest();
+    xhttp.onreadystatechange = function () {
+        if (this.readyState == 4) {
+            console.log("req OK");
+            if(this.status == 200){
+                handleResponse(this.responseText);
+            }else{
+                alert("getdata failed " + this.status)
             }
         }
+    };
+    xhttp.open("GET", "/getdata", true);
+    xhttp.send();
+
+    function handleResponse(jsonData) {
+        console.log(jsonData);
+        const parser = new DataParser(this.responseText);
 
         insertHeadline("RAM");
         var ramDiv = createDiv("ram");
-        var ramData = dataSource.getRAMData();
-        var ramChart = generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", dataSource.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
-        var ramPieChart = generatePieChart(createChartWrapper("ramPirChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+        var ramData = parser.getRAMData();
+        var ramChart = generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
+        var ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
 
         insertHeadline("CPU");
         var cpuDiv = createDiv("cpu");
-        var cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", dataSource.getCPUData(), { min: 0, max: 100, step: 10 });
+        var cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUData(), { min: 0, max: 100, step: 10 });
 
         var pChartBlocks = [];
-        var pNames = dataSource.getAllPartitionNames();
+        var pNames = parser.getAllPartitionNames();
         for (var i = 0; i < pNames.length; i++) {
             var pName = pNames[i];
             insertHeadline("Disk " + pName);
             var partitionDiv = createDiv("partition" + pName);
-            var pData = dataSource.getPartitionData(pName);
-            var partChart = generateChart(createChartWrapper("partitionChart" + pName, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", dataSource.getPartitionUsage(pName), { min: 0, max: pData.max, step: 50 });
+            var pData = parser.getPartitionData(pName);
+            var partChart = generateChart(createChartWrapper("partitionChart" + pName, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionUsage(pName), { min: 0, max: pData.max, step: 50 });
             var partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
             pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
         }
 
         insertHeadline("Network");
         var dlDiv = createDiv("download");
-        var dlChart = generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", dataSource.getDownload(), { min: 0, max: 0, step: 0.5 });
+        var dlChart = generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
         var ulDiv = createDiv("upload");
-        var ulChart = generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", dataSource.getUpload(), { min: 0, max: 0, step: 0.1 });
+        var ulChart = generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
 
         insertHeadline("Processes");
         var procDiv = createDiv("processes");
-        var procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", dataSource.getProcesses(), { min: 0, max: 0, step: 10 });
+        var procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", parser.getProcesses(), { min: 0, max: 0, step: 10 });
 
-        createDataHolder("uptime", "Uptime: " + formatTimeDuration(dataSource.getUptime()));
-        createDataHolder("values", "Values: " + dataSource.getValueCount());
-
+        createDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
+        createDataHolder("values", "Values: " + parser.getValueCount());
+    }
+        //TODO: rewrite for async model
         function refillCharts() {
-            dataSource.clearCache();
-            setChartData(this.ramChart, dataSource.getRAMUsage());
-            setChartData(this.ramPieChart, dataSource.getRAMData().data);
-            setChartData(this.cpuChart, dataSource.getCPUData());
+            setChartData(this.ramChart, parser.getRAMUsage());
+            setChartData(this.ramPieChart, parser.getRAMData().data);
+            setChartData(this.cpuChart, parser.getCPUData());
 
             for(var i = 0; i < pChartBlocks.length; i++){
                 var chartBlock = pChartBlocks[i];
-                setChartData(chartBlock.lineChart, dataSource.getPartitionUsage(chartBlock.name));
-                setChartData(chartBlock.pieChart, dataSource.getPartitionData(chartBlock.name).data);
+                setChartData(chartBlock.lineChart, parser.getPartitionUsage(chartBlock.name));
+                setChartData(chartBlock.pieChart, parser.getPartitionData(chartBlock.name).data);
             }
 
-            setChartData(this.dlChart, dataSource.getDownload());
-            setChartData(this.ulChart, dataSource.getUpload());
-            setChartData(this.procChart, dataSource.getProcesses());
+            setChartData(this.dlChart, parser.getDownload());
+            setChartData(this.ulChart, parser.getUpload());
+            setChartData(this.procChart, parser.getProcesses());
 
-            createDataHolder("uptime", "Uptime: " + formatTimeDuration(dataSource.getUptime()));
-            createDataHolder("values", "Values: " + dataSource.getValueCount());
+            createDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
+            createDataHolder("values", "Values: " + parser.getValueCount());
         }
 
         function setChartData(chart, data) {

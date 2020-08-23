@@ -68,17 +68,17 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 	var freeMem = vmStat.Available
 	var usedMem = vmStat.Used
 	html += "<h1>Physical Memory</h1>"
-	html += "Total memory: " + formatRound(byteToGB(totalMem), 0) + " GiB<br>"
-	html += "Free memory: " + formatRound(byteToGB(freeMem), 2) + " GiB, " + formatRound(float64(freeMem)/float64(totalMem)*100, 1) + "%<br>"
-	html += "Used memory: " + formatRound(byteToGB(usedMem), 2) + " GiB, " + formatRound(float64(usedMem)/float64(totalMem)*100, 1) + "%<br>"
+	html += "Total memory: " + formatRound(byteToGiB(totalMem), 0) + " GiB<br>"
+	html += "Free memory: " + formatRound(byteToGiB(freeMem), 2) + " GiB, " + formatRound(float64(freeMem)/float64(totalMem)*100, 1) + "%<br>"
+	html += "Used memory: " + formatRound(byteToGiB(usedMem), 2) + " GiB, " + formatRound(float64(usedMem)/float64(totalMem)*100, 1) + "%<br>"
 
 	var totalSwap = swapStat.Total
 	var freeSwap = swapStat.Free
 	var usedSwap = swapStat.Used
 	html += "<h1>Virtual Memory</h1>"
-	html += "Total swap: " + formatRound(byteToGB(totalSwap), 1) + " GiB<br>"
-	html += "Free swap: " + formatRound(byteToGB(freeSwap), 1) + "GiB, " + formatRound(float64(freeSwap)/float64(totalSwap)*100, 1) + "%<br>"
-	html += "Used swap: " + formatRound(byteToGB(usedSwap), 1) + "GiB, " + formatRound(float64(usedSwap)/float64(totalSwap)*100, 1) + "%<br>"
+	html += "Total swap: " + formatRound(byteToGiB(totalSwap), 1) + " GiB<br>"
+	html += "Free swap: " + formatRound(byteToGiB(freeSwap), 1) + "GiB, " + formatRound(float64(freeSwap)/float64(totalSwap)*100, 1) + "%<br>"
+	html += "Used swap: " + formatRound(byteToGiB(usedSwap), 1) + "GiB, " + formatRound(float64(usedSwap)/float64(totalSwap)*100, 1) + "%<br>"
 
 	for _, partitionStat := range partitionsStat {
 		var partitionName = partitionStat.Mountpoint
@@ -88,9 +88,9 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 		var diskFree = diskStat.Free
 		var diskUsed = diskStat.Used
 		html += "Filesystem: " + partitionStat.Fstype + "<br>"
-		html += "Total disk space: " + formatRound(byteToGB10(diskTotal), 0) + " GB<br>"
-		html += "Used disk space: " + formatRound(byteToGB10(diskUsed), 1) + " GB, " + formatRound(float64(diskUsed)/float64(diskTotal)*100, 2) + "%<br>"
-		html += "Free disk space: " + formatRound(byteToGB10(diskFree), 1) + " GB, " + formatRound(float64(diskFree)/float64(diskTotal)*100, 2) + "%<br>"
+		html += "Total disk space: " + formatRound(byteToGB(diskTotal), 0) + " GB<br>"
+		html += "Used disk space: " + formatRound(byteToGB(diskUsed), 1) + " GB, " + formatRound(float64(diskUsed)/float64(diskTotal)*100, 2) + "%<br>"
+		html += "Free disk space: " + formatRound(byteToGB(diskFree), 1) + " GB, " + formatRound(float64(diskFree)/float64(diskTotal)*100, 2) + "%<br>"
 	}
 
 	html += "CPU utilization: " + formatRound(percentage[0], 0) + "%<br>"
@@ -134,8 +134,8 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 
 func formatNetIO(io net.IOCountersStat) string {
 	var ret string = "Name: " + io.Name + "<br>"
-	ret += "Data Sent: " + formatRound(byteToMB(io.BytesSent), 0) + " MB<br>"
-	ret += "Data Recv: " + formatRound(byteToMB(io.BytesRecv), 0) + " MB<br>"
+	ret += "Data Sent: " + formatRound(byteToMiB(io.BytesSent), 0) + " MB<br>"
+	ret += "Data Recv: " + formatRound(byteToMiB(io.BytesRecv), 0) + " MB<br>"
 	ret += "Packets Sent: " + formatUInt(io.PacketsSent) + "<br>"
 	ret += "Packets Recv: " + formatUInt(io.PacketsRecv) + "<br>"
 	return ret
@@ -147,6 +147,7 @@ func getDataRequest(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		jsonData, err := json.Marshal(list.GetList())
 		if err == nil {
+			w.Header().Add("Content-Type", "application/json")
 			fmt.Fprint(w, string(jsonData))
 		} else {
 			fmt.Fprint(w, "Internal Error")
@@ -277,8 +278,6 @@ func testHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 func readCurrentData() DataObject {
-	fmt.Println("Reading data...")
-
 	start := time.Now()
 	vmStat, err := mem.VirtualMemory() // Physical Memory
 	handleError(err)
@@ -302,11 +301,10 @@ func readCurrentData() DataObject {
 		partitionStatsArr[i] = PartitionStats{partitionName, diskStat.Total, diskStat.Free, diskStat.Used}
 	}
 	dataset.Partitions = partitionStatsArr
-	dataset.CPU = CPUStats{percentage[0]}
+	dataset.CPU = CPUStats{round(percentage[0])}
 	dataset.System = SystemStats{hostStat.Uptime, hostStat.Procs}
 	dataset.Network = NetStats{combinedInterfaceIO[0].BytesSent, combinedInterfaceIO[0].BytesRecv}
-	fmt.Print("Took: ")
-	fmt.Println(time.Since(start))
+	fmt.Println("Read data in", time.Since(start))
 	return dataset
 }
 
@@ -315,8 +313,8 @@ func readData() {
 }
 
 const (
-	baseUnit   float64 = 1024
-	baseUnit10 float64 = 1000
+	kibiByte float64 = 1024
+	kiloByte float64 = 1000
 )
 
 func formatUInt(value uint64) string {
@@ -327,24 +325,28 @@ func formatInt(value int64) string {
 	return strconv.FormatInt(value, 10)
 }
 
+func byteToMiB(b uint64) float64 {
+	return math.Round(float64(b) / kibiByte / kibiByte)
+}
+
+func byteToGiB(b uint64) float64 {
+	return float64(b) / kibiByte / kibiByte / kibiByte
+}
+
 func byteToMB(b uint64) float64 {
-	return math.Round(float64(b) / baseUnit / baseUnit)
+	return math.Round(float64(b) / kiloByte / kiloByte)
 }
 
 func byteToGB(b uint64) float64 {
-	return float64(b) / baseUnit / baseUnit / baseUnit
-}
-
-func byteToMB10(b uint64) float64 {
-	return math.Round(float64(b) / baseUnit10 / baseUnit10)
-}
-
-func byteToGB10(b uint64) float64 {
-	return float64(b) / baseUnit10 / baseUnit10 / baseUnit10
+	return float64(b) / kiloByte / kiloByte / kiloByte
 }
 
 func formatRound(value float64, digits int) string {
 	return strconv.FormatFloat(value, 'f', digits, 64)
+}
+
+func round(value float64) float64 {
+	return math.Round(value*100) / 100
 }
 
 func formatTimeDuration(duration time.Duration) string {
