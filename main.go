@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"compress/gzip"
 	"encoding/json"
 	"flag"
 	"fmt"
@@ -22,7 +24,6 @@ func handleError(err error) {
 		fmt.Println("An Error ouccured")
 		fmt.Println(err)
 		fmt.Println(err.Error())
-		//panic(err)
 	}
 }
 
@@ -141,6 +142,8 @@ func formatNetIO(io net.IOCountersStat) string {
 	return ret
 }
 
+//handles requests for chart data
+//returns a json array with all values
 func getDataRequest(w http.ResponseWriter, r *http.Request) {
 	fmt.Println("getDataRequest from: " + r.RemoteAddr)
 	switch r.Method {
@@ -148,13 +151,30 @@ func getDataRequest(w http.ResponseWriter, r *http.Request) {
 		jsonData, err := json.Marshal(list.GetList())
 		if err == nil {
 			w.Header().Add("Content-Type", "application/json")
-			fmt.Fprint(w, string(jsonData))
+
+			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
+				w.Header().Add("Content-Encoding", "gzip")
+				w.Write(compressGzip(jsonData))
+			} else {
+				fmt.Fprint(w, string(jsonData))
+			}
 		} else {
 			fmt.Fprint(w, "Internal Error")
 		}
 	default:
 		fmt.Fprintf(w, "Only GET is supported")
 	}
+}
+
+func compressGzip(input []byte) []byte {
+	var buffer bytes.Buffer
+	zw := gzip.NewWriter(&buffer)
+	_, err := zw.Write(input)
+
+	handleError(err)
+	handleError(zw.Close())
+
+	return buffer.Bytes()
 }
 
 func read(w http.ResponseWriter, r *http.Request) {
