@@ -5,7 +5,7 @@ import (
 	"compress/gzip"
 	"encoding/json"
 	"flag"
-	"fmt"
+	"log"
 	"math"
 	"net/http"
 	"strconv"
@@ -21,9 +21,9 @@ import (
 
 func handleError(err error) {
 	if err != nil {
-		fmt.Println("An Error ouccured")
-		fmt.Println(err)
-		fmt.Println(err.Error())
+		log.Println("An Error ouccured")
+		log.Println(err)
+		log.Println(err.Error())
 	}
 }
 
@@ -32,36 +32,36 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 
 	vmStat, err := mem.VirtualMemory() // Physical Memory
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
 	swapStat, err := mem.SwapMemory() //Virtual Memory
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
 	partitionsStat, err := disk.Partitions(true) //Partition List
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
 	percentage, err := cpu.Percent(0, false) //All core utilization stats
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
 	allCores, err := cpu.Percent(0, true) //Combined utilization stats
 	handleError(err)
 
 	hostStat, err := host.Info() // host Info
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
 	interfStat, err := net.Interfaces() //get network interfaces
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
 	combinedInterfaceIO, err := net.IOCounters(false) //combined net interfaces io stats
 	handleError(err)
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 
-	fmt.Println("All stats read")
+	log.Println("All stats read")
 
 	var html string = "<html><body style=\"font-family: sans-serif;\">"
 
@@ -130,7 +130,7 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(html))
 
-	fmt.Println(time.Since(startX))
+	log.Println(time.Since(startX))
 }
 
 func formatNetIO(io net.IOCountersStat) string {
@@ -145,24 +145,23 @@ func formatNetIO(io net.IOCountersStat) string {
 //handles requests for chart data
 //returns a json array with all values
 func getDataRequest(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("getDataRequest from: " + r.RemoteAddr)
+	log.Println("getDataRequest from: " + r.RemoteAddr)
 	switch r.Method {
 	case "GET":
-		jsonData, err := json.Marshal(list.GetList())
-		if err == nil {
+		if jsonData, err := json.Marshal(list.GetList()); err == nil {
 			w.Header().Add("Content-Type", "application/json")
 
 			if strings.Contains(r.Header.Get("Accept-Encoding"), "gzip") {
 				w.Header().Add("Content-Encoding", "gzip")
 				w.Write(compressGzip(jsonData))
 			} else {
-				fmt.Fprint(w, string(jsonData))
+				w.Write(jsonData)
 			}
 		} else {
-			fmt.Fprint(w, "Internal Error")
+			http.Error(w, "Json error", http.StatusInternalServerError)
 		}
 	default:
-		fmt.Fprintf(w, "Only GET is supported")
+		http.Error(w, "Unsupported method", http.StatusMethodNotAllowed)
 	}
 }
 
@@ -175,12 +174,6 @@ func compressGzip(input []byte) []byte {
 	handleError(zw.Close())
 
 	return buffer.Bytes()
-}
-
-func read(w http.ResponseWriter, r *http.Request) {
-	fmt.Println("Read Request from: " + r.RemoteAddr)
-	list.Add(readCurrentData())
-	fmt.Fprintln(w, "Read OK")
 }
 
 func raw(w http.ResponseWriter, r *http.Request) {
@@ -222,7 +215,7 @@ func raw(w http.ResponseWriter, r *http.Request) {
 	combinedInterfaceIO, err := net.IOCounters(false) //combined net interfaces io stats
 	handleError(err)
 
-	fmt.Println("All stats read")
+	log.Println("All stats read")
 
 	var html string = "<html><body style=\"font-family: sans-serif;\">"
 
@@ -289,12 +282,8 @@ func raw(w http.ResponseWriter, r *http.Request) {
 
 	w.Write([]byte(html))
 
-	fmt.Print("Raw Stat read time: ")
-	fmt.Println(time.Since(startX))
-}
-
-func testHandler(w http.ResponseWriter, r *http.Request) {
-	w.Write([]byte("Test"))
+	log.Print("Raw Stat read time: ")
+	log.Println(time.Since(startX))
 }
 
 func readCurrentData() DataObject {
@@ -324,7 +313,7 @@ func readCurrentData() DataObject {
 	dataset.CPU = CPUStats{round(percentage[0])}
 	dataset.System = SystemStats{hostStat.Uptime, hostStat.Procs}
 	dataset.Network = NetStats{combinedInterfaceIO[0].BytesSent, combinedInterfaceIO[0].BytesRecv}
-	fmt.Println("Read data in", time.Since(start))
+	log.Println("Read data in", time.Since(start))
 	return dataset
 }
 
@@ -398,10 +387,10 @@ func formatTimeDuration(duration time.Duration) string {
 var list CappedList
 
 func main() {
-	fmt.Println("Starting...")
+	log.Println("Starting...")
 	var portFlag = flag.Int("port", 1510, "Port the webserver will be running on")
-	var delayFlag = flag.Int("delay", 10, "Seconds between getting data")
-	var entriesFlag = flag.Int("entries", 1000, "Amount of entries that will be stored in the memory")
+	var delayFlag = flag.Int("delay", 10, "Seconds between reading datasets")
+	var entriesFlag = flag.Int("entries", 1000, "Amount of entries that will be stored")
 	flag.Parse()
 
 	var delay = *delayFlag
@@ -409,11 +398,11 @@ func main() {
 	var port = *portFlag
 
 	//maximum amount of time that can be shown in a chart
-	fmt.Println("Max displayable time: " + formatTimeDuration(time.Duration(entries*delay)*time.Second))
+	log.Println("Max displayable time: " + formatTimeDuration(time.Duration(entries*delay)*time.Second))
 	var dataPerMin = 60 / delay
-	fmt.Printf("Datasets per minute: %v \n", dataPerMin)
+	log.Printf("Datasets per minute: %v \n", dataPerMin)
 
-	fmt.Printf("Running on Port %v with max %v entries at %vs polling rate\n", port, entries, delay)
+	log.Printf("Running on port %v with %v max entries at %vs polling rate\n", port, entries, delay)
 
 	list = CappedList{list: make([]DataObject, 0, entries), limit: entries}
 
@@ -424,10 +413,8 @@ func main() {
 		}
 	}()
 
-	http.HandleFunc("/test", testHandler)
 	http.HandleFunc("/gethwdata", getHardwareData)
 	http.HandleFunc("/getdata", getDataRequest)
-	http.HandleFunc("/read", read)
 	http.HandleFunc("/raw", raw)
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 

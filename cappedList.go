@@ -1,7 +1,5 @@
 package main
 
-import "fmt"
-
 //CappedList is a dynamic array
 type CappedList struct {
 	limit int
@@ -20,8 +18,4 @@ func (d *CappedList) Add(e DataObject) {
 	if length > d.limit {
 		d.list = d.list[length-d.limit:]
 	}
-}
-
-func (d CappedList) String() string {
-	return fmt.Sprintf("%v", d.list)
 }

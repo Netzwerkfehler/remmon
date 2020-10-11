@@ -2,7 +2,7 @@
 <html>
 
 <head>
-    <title>Charts</title>
+    <title>HW Charts</title>
     <script src="scripts/moment.min.js"></script>
     <script src="scripts/Chart.min.js"></script>
     <link href="style.css" rel="stylesheet">
@@ -11,21 +11,24 @@
 </head>
 
 <body>
-    <div class="header">
-        <div class="left">
-            <div id="uptime" class="hlData" title="Uptime of the monitored machine"></div>
-            <div id="values" class="hlData" title="Amount of datasets"></div>
+    <div class="header box">
+        <div id="left">
+            <div id="uptime" class="headerElement" title="Uptime of the monitored machine"></div>
+            <div id="values" class="headerElement" title="Amount of datasets"></div>
         </div>
-        <div class="middle">
+
+        <div id="middle">
             <h1 class="mainHL">Hardware Statistics</h1>
         </div>
-        <div class="right">
-            <input type="button" value="Update" class="updateButton" title="Updates all charts without reloading the page" onclick="updateCharts();">
-            <div id="autoUpdateDiv" class="autoUpdateDiv">
+
+        <div id="right" class="updateControls">
+            <input id="updateButton" type="button" value="Update" class="headerElement" title="Updates all charts without reloading the page" onclick="updateCharts();">
+            
+            <div id="autoUpdateDiv">
                 <label title="Check to automatically update the charts">
-                    <input type="checkbox" class="autoUpdateCheckbox" id="autoUpdateCheckbox" onclick="setUpdateRate();">Auto update every
+                    <input type="checkbox" id="autoUpdateCheckbox" onclick="setUpdateRate();">Auto update every
                 </label>
-                <input type="number" min="1" value="10" class="updateRateIn" id="updateRate" class="autoUpdateRate" onclick="setUpdateRate();">
+                <input type="number" min="1" value="10" class="autoUpdateRate" id="updateRate" onclick="setUpdateRate();">
                 <select id="updateRateUnit" onchange="setUpdateRate();">
                     <option value="sec">Seconds</option>
                     <option value="min" selected="selected">Minutes</option>
@@ -39,6 +42,7 @@
     </div>
 
     <script>
+        //more async stuff
         requestData(handleResponse);
 
         function requestData(handlerFunc){
@@ -62,12 +66,12 @@
             insertHeadline("RAM");
             const ramDiv = createDiv("ram");
             const ramData = parser.getRAMData();
-            this.ramChart = generateChart(createChartWrapper("ramChart", "all lineChartX", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
-            this.ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "all pieChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+            this.ramChart = generateChart(createChartWrapper("ramChart", "box chartWrapper rightSpace", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
+            this.ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "box chartWrapper smallChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
 
             insertHeadline("CPU");
             const cpuDiv = createDiv("cpu");
-            this.cpuChart = generateChart(createChartWrapper("cpuChart", "all lineChart", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUStats(), { min: 0, max: 100, step: 10 });
+            this.cpuChart = generateChart(createChartWrapper("cpuChart", "box chartWrapper", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUStats(), { min: 0, max: 100, step: 10 });
 
             this.pChartBlocks = [];
             var pNames = parser.getAllPartitionNames();
@@ -76,20 +80,23 @@
                 insertHeadline("Disk " + pName);
                 const partitionDiv = createDiv("partition" + pName);
                 const pData = parser.getPartitionData(pName);
-                const partChart = generateChart(createChartWrapper("partitionChart" + pName, "all lineChartX", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionStats(pName), { min: 0, max: pData.max, step: 50 });
-                const partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "all pieChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+                const partChart = generateChart(createChartWrapper("partitionChart" + pName, "box chartWrapper rightSpace", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionStats(pName), { min: 0, max: pData.max, step: 50 });
+                const partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "box chartWrapper smallChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
                 pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
             }
 
             insertHeadline("Network");
             const dlDiv = createDiv("download");
-            this.dlChart = generateChart(createChartWrapper("downloadChart", "all lineChart", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
+            this.dlChart = generateChart(createChartWrapper("downloadChart", "box chartWrapper", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
+            
+            insertSpacer();
+            
             const ulDiv = createDiv("upload");
-            this.ulChart = generateChart(createChartWrapper("uploadChart", "all lineChart", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
+            this.ulChart = generateChart(createChartWrapper("uploadChart", "box chartWrapper", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
 
             insertHeadline("Processes");
             const procDiv = createDiv("processes");
-            this.procChart = generateChart(createChartWrapper("processesChart", "all lineChart", procDiv), "Processes", "Total processes running", "", parser.getProcessCount(), { min: 0, max: 0, step: 10 });
+            this.procChart = generateChart(createChartWrapper("processesChart", "box chartWrapper", procDiv), "Processes", "Processes running", "", parser.getProcessCount(), { min: 0, max: 0, step: 10 });
 
             createOrUpdateDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
             createOrUpdateDataHolder("values", "Values: " + parser.getValueCount());
@@ -102,38 +109,38 @@
         function refillCharts(jsonData) {
             const parser = new DataParser(jsonData);
 
-            setChartData(this.ramChart, parser.getRAMUsage());
-            setChartData(this.ramPieChart, parser.getRAMData().data);
-            setChartData(this.cpuChart, parser.getCPUStats());
+            updateChartData(this.ramChart, parser.getRAMUsage());
+            updateChartData(this.ramPieChart, parser.getRAMData().data);
+            updateChartData(this.cpuChart, parser.getCPUStats());
 
             for (var i = 0; i < pChartBlocks.length; i++) {
                 var chartBlock = pChartBlocks[i];
-                setChartData(chartBlock.lineChart, parser.getPartitionStats(chartBlock.name));
-                setChartData(chartBlock.pieChart, parser.getPartitionData(chartBlock.name).data);
+                updateChartData(chartBlock.lineChart, parser.getPartitionStats(chartBlock.name));
+                updateChartData(chartBlock.pieChart, parser.getPartitionData(chartBlock.name).data);
             }
 
-            setChartData(this.dlChart, parser.getDownload());
-            setChartData(this.ulChart, parser.getUpload());
-            setChartData(this.procChart, parser.getProcessCount());
+            updateChartData(this.dlChart, parser.getDownload());
+            updateChartData(this.ulChart, parser.getUpload());
+            updateChartData(this.procChart, parser.getProcessCount());
 
             createOrUpdateDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
             createOrUpdateDataHolder("values", "Values: " + parser.getValueCount());
         }
 
-        function setChartData(chart, data) {
+        function updateChartData(chart, data) {
             chart.data.datasets[0].data = data;
             chart.update();
         }
 
         var updateTimer;
 
-        //sets and removes the auto update timer and delay
+        // sets and/or removes the auto update timer and delay
         function setUpdateRate() {
-            var doAutoUpdate = document.getElementById("autoUpdateCheckbox");
+            var autoUpdateEnabled = document.getElementById("autoUpdateCheckbox");
             var updateRateValue = document.getElementById("updateRate");
             var updateRateUnit = document.getElementById("updateRateUnit");
 
-            if (doAutoUpdate.checked) {
+            if (autoUpdateEnabled.checked) {
                 updateTimer = setInterval(function () {
                     updateCharts();
                 }, getDelayMS(updateRateValue.value, updateRateUnit.value));
@@ -143,13 +150,15 @@
         }
 
         function getDelayMS(value, unit) {
-            if (unit === "sec") {
-                return value * 1000;
-            } else if (unit === "min") {
-                return value * 1000 * 60;
+            switch (unit) {
+                case "sec":
+                    return value * 1000;
+                case "min":
+                    return value * 1000 * 60;
+                default:
+                    console.error("Unknown time unit: " + unit);
+                    return -1;
             }
-            console.error("Unknown time unit: " + unit);
-            return -1;
         }
     </script>
 </body>

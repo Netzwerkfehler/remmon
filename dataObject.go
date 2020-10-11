@@ -57,7 +57,3 @@ func (t JSONTime) MarshalJSON() ([]byte, error) {
 	stamp := fmt.Sprintf("\"%s\"", t.Format("2006-01-02 15:04:05"))
 	return []byte(stamp), nil
 }
-
-// func (d DataObject) String() string {
-// 	return fmt.Sprintf("Date: %v, CPU: %v, Memory: %vMB ", d.timestamp.Format("2006-01-02 15:04:05"), d.cpu, d.mem)
-// }

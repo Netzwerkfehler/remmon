@@ -1,10 +1,10 @@
 function generateChart(elementId, title, yAxisName, unitString, chartData, range) {
-    var cfg = {
+    var config = {
         data: {
             datasets: [{
                 label: title,
-                backgroundColor: "#0C47EB",
-                borderColor: "#0C47EB",
+                backgroundColor: "#00A9D4",
+                borderColor: "#00A9D4",
                 data: chartData,
                 type: "line",
                 fill: false,
@@ -19,14 +19,12 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
                     display: true,
                     type: "time",
                     distribution: "linear",
-                    // distribution: "series",
                     offset: true,
                     ticks: {
                         major: {
                             enabled: true,
                             fontStyle: "bold"
                         },
-                        // source: "data",
                         source: "auto",
                         autoSkip: false,
                         maxRotation: 0,
@@ -37,7 +35,6 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
                         parser: "YYYY-MM-DD HH:mm:ss",
                         tooltipFormat: "HH:mm:ss DD.MM.YYYY",
                         displayFormats: {
-                            // second: "HH:mm:ss",
                             minute: "HH:mm",
                             hour: "HH:mm"
                         }
@@ -72,14 +69,11 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
                         return label;
                     }
                 }
-            }
+            },
+            maintainAspectRatio: false
         }
     };
-
-    var ctx = document.getElementById(elementId).getContext("2d");
-    ctx.canvas.width = 1000;
-    ctx.canvas.height = 200;
-    return new Chart(ctx, cfg);
+    return new Chart(elementId, config);
 }
 
 function generatePieChart(elementId, title, yAxisName, unitString, labels, colors, chartData, maxValue) {
@@ -111,10 +105,18 @@ function generatePieChart(elementId, title, yAxisName, unitString, labels, color
                         return label + value.toFixed(2) + " " + unitString + " (" + percent.toFixed(2) + "%)";
                     }
                 }
-            }
+            },
+            layout: {
+                padding: {
+                    bottom: 20,
+                    right: 10,
+                    left: 10
+                }
+            },
+            maintainAspectRatio: false
         }
     }
-    return new Chart(document.getElementById(elementId), config);
+    return new Chart(elementId, config);
 }
 
 function createDiv(id) {
@@ -123,6 +125,12 @@ function createDiv(id) {
     divEl.id = id;
     divEl.classList = "chartDiv";
     return divEl;
+}
+
+function insertSpacer() {
+    var spacerDiv = document.createElement("div");
+    spacerDiv.classList = "spacer";
+    document.getElementById("contentDiv").appendChild(spacerDiv);
 }
 
 function insertHeadline(text) {
