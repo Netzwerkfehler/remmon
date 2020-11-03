@@ -1,6 +1,12 @@
 
 # remmon
-A simple remote monitoring tool for Windows (will probably work on other OSes too)
+A simple remote monitoring tool for Windows and Linux
+
+## Tested on
+- Windows 10
+- Ubuntu 20.04.1 LTS
+- Debian 10
+
 
 ## Features
 
