@@ -38,7 +38,7 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 	handleError(err)
 	log.Println(time.Since(startX))
 
-	partitionsStat, err := disk.Partitions(true) //Partition List
+	partitionsStat, err := disk.Partitions(false) //Partition List
 	handleError(err)
 	log.Println(time.Since(startX))
 
@@ -185,7 +185,7 @@ func raw(w http.ResponseWriter, r *http.Request) {
 	swapStat, err := mem.SwapMemory() //Virtual Memory
 	handleError(err)
 
-	partitionsStat, err := disk.Partitions(true) //Partition List
+	partitionsStat, err := disk.Partitions(false) //Partition List
 	handleError(err)
 
 	cpuStat, err := cpu.Info() //CPU stats
@@ -290,7 +290,7 @@ func readCurrentData() DataObject {
 	start := time.Now()
 	vmStat, err := mem.VirtualMemory() // Physical Memory
 	handleError(err)
-	partitionsStat, err := disk.Partitions(true) //Partition List
+	partitionsStat, err := disk.Partitions(false) //Partition List
 	handleError(err)
 	percentage, err := cpu.Percent(0, false) //All core utilization stats
 	handleError(err)
