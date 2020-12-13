@@ -1,4 +1,4 @@
-html, body{
+html, body {
     margin: 0;
     padding: 0;
     height: 100%;
@@ -94,7 +94,18 @@ label {
     width: 3em;
 }
 
-.mainHL {
-    margin-top: 10px;
-    margin-bottom: 10px;
+.middle {
+    min-width: 30%;
+    margin: 0 2% 0 2%;
+    text-align: center;
+}
+
+.headline {
+    display: block;
+    font-size: 2em;
+    font-weight: bold;
+}
+
+.outer {
+    min-width: 18%;
 }

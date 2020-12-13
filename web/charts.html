@@ -3,8 +3,10 @@
 
 <head>
     <title>HW Charts</title>
+    <meta name="viewport" content="initial-scale=1">
     <script src="scripts/moment.min.js"></script>
     <script src="scripts/Chart.min.js"></script>
+    <script async src="scripts/deferred.js"></script>
     <link href="style.css" rel="stylesheet">
     <script src="script.js"></script>
     <link rel="shortcut icon" href="favicon.ico">
@@ -12,16 +14,21 @@
 
 <body>
     <div class="header box">
-        <div id="left">
-            <div id="uptime" class="headerElement" title="Uptime of the monitored machine"></div>
-            <div id="values" class="headerElement" title="Amount of datasets"></div>
+        <div id="left" class="outer">
+            <div class="headerElement" title="Uptime of the monitored machine">
+                Uptime: <span id="uptime">loading</span>
+            </div>
+            <div class="headerElement" title="Amount of datasets">
+                Values: <span id="values">loading</span>
+            </div>
         </div>
 
-        <div id="middle">
-            <h1 class="mainHL">Hardware Statistics</h1>
+        <div id="middle" class="middle">
+            <span class="headline">Hardware Statistics</span>
+            <span id="hostname">loading</span>
         </div>
 
-        <div id="right" class="updateControls">
+        <div id="right" class="updateControls outer">
             <input id="updateButton" type="button" value="Update" class="headerElement" title="Updates all charts without reloading the page" onclick="updateCharts();">
             
             <div id="autoUpdateDiv">
@@ -41,126 +48,7 @@
         <!--will be filled with generated content-->
     </div>
 
-    <script>
-        //more async stuff
-        requestData(handleResponse);
-
-        function requestData(handlerFunc){
-            var xhttp = new XMLHttpRequest();
-            xhttp.onreadystatechange = function () {
-                if (this.readyState == 4) {
-                    if (this.status == 200) {
-                        handlerFunc(this.responseText);
-                    } else {
-                        alert("getdata failed " + this.status);
-                    }
-                }
-            };
-            xhttp.open("GET", "/getdata", true);
-            xhttp.send();
-        }
-
-        function handleResponse(jsonData) {
-            const parser = new DataParser(jsonData);
-
-            insertHeadline("RAM");
-            const ramDiv = createDiv("ram");
-            const ramData = parser.getRAMData();
-            this.ramChart = generateChart(createChartWrapper("ramChart", "box chartWrapper rightSpace", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
-            this.ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "box chartWrapper smallChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
-
-            insertHeadline("CPU");
-            const cpuDiv = createDiv("cpu");
-            this.cpuChart = generateChart(createChartWrapper("cpuChart", "box chartWrapper", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUStats(), { min: 0, max: 100, step: 10 });
-
-            this.pChartBlocks = [];
-            var pNames = parser.getAllPartitionNames();
-            for (var i = 0; i < pNames.length; i++) {
-                var pName = pNames[i];
-                insertHeadline("Disk " + pName);
-                const partitionDiv = createDiv("partition" + pName);
-                const pData = parser.getPartitionData(pName);
-                const partChart = generateChart(createChartWrapper("partitionChart" + pName, "box chartWrapper rightSpace", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionStats(pName), { min: 0, max: pData.max, step: 50 });
-                const partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "box chartWrapper smallChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
-                pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
-            }
-
-            insertHeadline("Network");
-            const dlDiv = createDiv("download");
-            this.dlChart = generateChart(createChartWrapper("downloadChart", "box chartWrapper", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
-            
-            insertSpacer();
-            
-            const ulDiv = createDiv("upload");
-            this.ulChart = generateChart(createChartWrapper("uploadChart", "box chartWrapper", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
-
-            insertHeadline("Processes");
-            const procDiv = createDiv("processes");
-            this.procChart = generateChart(createChartWrapper("processesChart", "box chartWrapper", procDiv), "Processes", "Processes running", "", parser.getProcessCount(), { min: 0, max: 0, step: 10 });
-
-            createOrUpdateDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
-            createOrUpdateDataHolder("values", "Values: " + parser.getValueCount());
-        }
-
-        function updateCharts(){
-            requestData(refillCharts);
-        }
-
-        function refillCharts(jsonData) {
-            const parser = new DataParser(jsonData);
-
-            updateChartData(this.ramChart, parser.getRAMUsage());
-            updateChartData(this.ramPieChart, parser.getRAMData().data);
-            updateChartData(this.cpuChart, parser.getCPUStats());
-
-            for (var i = 0; i < pChartBlocks.length; i++) {
-                var chartBlock = pChartBlocks[i];
-                updateChartData(chartBlock.lineChart, parser.getPartitionStats(chartBlock.name));
-                updateChartData(chartBlock.pieChart, parser.getPartitionData(chartBlock.name).data);
-            }
-
-            updateChartData(this.dlChart, parser.getDownload());
-            updateChartData(this.ulChart, parser.getUpload());
-            updateChartData(this.procChart, parser.getProcessCount());
-
-            createOrUpdateDataHolder("uptime", "Uptime: " + formatTimeDuration(parser.getUptime()));
-            createOrUpdateDataHolder("values", "Values: " + parser.getValueCount());
-        }
-
-        function updateChartData(chart, data) {
-            chart.data.datasets[0].data = data;
-            chart.update();
-        }
-
-        var updateTimer;
-
-        // sets and/or removes the auto update timer and delay
-        function setUpdateRate() {
-            var autoUpdateEnabled = document.getElementById("autoUpdateCheckbox");
-            var updateRateValue = document.getElementById("updateRate");
-            var updateRateUnit = document.getElementById("updateRateUnit");
-
-            if (autoUpdateEnabled.checked) {
-                updateTimer = setInterval(function () {
-                    updateCharts();
-                }, getDelayMS(updateRateValue.value, updateRateUnit.value));
-            } else {
-                clearInterval(updateTimer);
-            }
-        }
-
-        function getDelayMS(value, unit) {
-            switch (unit) {
-                case "sec":
-                    return value * 1000;
-                case "min":
-                    return value * 1000 * 60;
-                default:
-                    console.error("Unknown time unit: " + unit);
-                    return -1;
-            }
-        }
-    </script>
+    <script>requestGET("/getdata", generateCharts);</script>
 </body>
 
 </html>

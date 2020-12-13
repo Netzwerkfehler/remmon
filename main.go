@@ -19,6 +19,16 @@ import (
 	"github.com/shirou/gopsutil/net"
 )
 
+const (
+	kibiByte = 1024
+	kiloByte = 1000
+)
+
+var (
+	hideHostname bool
+	list         CappedList
+)
+
 func handleError(err error) {
 	if err != nil {
 		log.Println("An Error ouccured")
@@ -94,6 +104,7 @@ func getHardwareData(w http.ResponseWriter, r *http.Request) {
 		html += "Free disk space: " + formatRound(byteToGB(diskFree), 1) + " GB, " + formatRound(float64(diskFree)/float64(diskTotal)*100, 2) + "%<br>"
 	}
 
+	html += "<h1>CPU</h1>"
 	html += "CPU utilization: " + formatRound(percentage[0], 0) + "%<br>"
 	for idx, cpupercent := range allCores {
 		html += "Core " + strconv.Itoa(idx) + " utilization: " + formatRound(cpupercent, 0) + "%<br>"
@@ -174,6 +185,15 @@ func compressGzip(input []byte) []byte {
 	handleError(zw.Close())
 
 	return buffer.Bytes()
+}
+
+func getHostname(w http.ResponseWriter, r *http.Request) {
+	if hideHostname {
+		return
+	}
+	inf, err := host.Info()
+	handleError(err)
+	w.Write([]byte(inf.Hostname))
 }
 
 func raw(w http.ResponseWriter, r *http.Request) {
@@ -321,11 +341,6 @@ func readData() {
 	list.Add(readCurrentData())
 }
 
-const (
-	kibiByte float64 = 1024
-	kiloByte float64 = 1000
-)
-
 func formatUInt(value uint64) string {
 	return strconv.FormatUint(value, 10)
 }
@@ -384,18 +399,18 @@ func formatTimeDuration(duration time.Duration) string {
 	return builder.String()
 }
 
-var list CappedList
-
 func main() {
 	log.Println("Starting...")
 	var portFlag = flag.Int("port", 1510, "Port the webserver will be running on")
 	var delayFlag = flag.Int("delay", 10, "Seconds between reading datasets")
 	var entriesFlag = flag.Int("entries", 1000, "Amount of entries that will be stored")
+	var hideHostnameFlag = flag.Bool("hideHostname", false, "Set to true to hide the hostname")
 	flag.Parse()
 
 	var delay = *delayFlag
 	var entries = *entriesFlag
 	var port = *portFlag
+	hideHostname = *hideHostnameFlag
 
 	//maximum amount of time that can be shown in a chart
 	log.Println("Max displayable time: " + formatTimeDuration(time.Duration(entries*delay)*time.Second))
@@ -403,6 +418,7 @@ func main() {
 	log.Printf("Datasets per minute: %v \n", dataPerMin)
 
 	log.Printf("Running on port %v with %v max entries at %vs polling rate\n", port, entries, delay)
+	log.Printf("Hostname hidden: %v\n", hideHostname)
 
 	list = CappedList{list: make([]DataObject, 0, entries), limit: entries}
 
@@ -416,6 +432,7 @@ func main() {
 	http.HandleFunc("/gethwdata", getHardwareData)
 	http.HandleFunc("/getdata", getDataRequest)
 	http.HandleFunc("/raw", raw)
+	http.HandleFunc("/hostname", getHostname)
 	http.Handle("/", http.FileServer(http.Dir("./web")))
 
 	http.ListenAndServe(":"+strconv.Itoa(port), nil)

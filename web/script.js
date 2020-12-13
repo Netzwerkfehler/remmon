@@ -119,6 +119,51 @@ function generatePieChart(elementId, title, yAxisName, unitString, labels, color
     return new Chart(elementId, config);
 }
 
+function generateCharts(jsonData) {
+    const parser = new DataParser(jsonData);
+
+    insertHeadline("RAM");
+    const ramDiv = createDiv("ram");
+    const ramData = parser.getRAMData();
+    this.ramChart = generateChart(createChartWrapper("ramChart", "box chartWrapper rightSpace", ramDiv), "RAM usage", "RAM in GB", "GB", parser.getRAMUsage(), { min: 0, max: ramData.max, step: 1 });
+    this.ramPieChart = generatePieChart(createChartWrapper("ramPieChart", "box chartWrapper smallChart", ramDiv), "RAM usage", "RAM in GB", "GB", ["Free", "Used"], ["green", "orange"], ramData.data, ramData.max);
+
+    insertHeadline("CPU");
+    const cpuDiv = createDiv("cpu");
+    this.cpuChart = generateChart(createChartWrapper("cpuChart", "box chartWrapper", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUStats(), { min: 0, max: 100, step: 10 });
+
+    this.pChartBlocks = [];
+    var pNames = parser.getAllPartitionNames();
+    for (var i = 0; i < pNames.length; i++) {
+        var pName = pNames[i];
+        insertHeadline("Disk " + pName);
+        const partitionDiv = createDiv("partition" + pName);
+        const pData = parser.getPartitionData(pName);
+        const partChart = generateChart(createChartWrapper("partitionChart" + pName, "box chartWrapper rightSpace", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionStats(pName), { min: 0, max: pData.max, step: 50 });
+        const partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "box chartWrapper smallChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
+        pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
+    }
+
+    insertHeadline("Network");
+    const dlDiv = createDiv("download");
+    this.dlChart = generateChart(createChartWrapper("downloadChart", "box chartWrapper", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
+    
+    insertSpacer();
+    
+    const ulDiv = createDiv("upload");
+    this.ulChart = generateChart(createChartWrapper("uploadChart", "box chartWrapper", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
+
+    insertHeadline("Processes");
+    const procDiv = createDiv("processes");
+    this.procChart = generateChart(createChartWrapper("processesChart", "box chartWrapper", procDiv), "Processes", "Processes running", "", parser.getProcessCount(), { min: 0, max: 0, step: 10 });
+
+    updateText("uptime", formatTimeDuration(parser.getUptime()));
+    updateText("values", parser.getValueCount());
+    requestGET("/hostname", function(response) {
+        updateText("hostname", response);
+    });
+}
+
 function createDiv(id) {
     var divEl = document.createElement("div");
     document.getElementById("contentDiv").appendChild(divEl);
@@ -140,17 +185,8 @@ function insertHeadline(text) {
     document.getElementById("contentDiv").appendChild(hl);
 }
 
-function createOrUpdateDataHolder(id, text) {
-    var el = document.getElementById(id);
-    if (el) {
-        el.textContent = text;
-    } else {
-        var hl = document.createElement("h1");
-        hl.id = id;
-        hl.textContent = text;
-        hl.classList = "statHL";
-        document.getElementById("contentDiv").appendChild(hl);
-    }
+function updateText(id, text) {
+    document.getElementById(id).textContent = text;
 }
 
 function createChartWrapper(id, classes, parent) {
@@ -187,10 +223,21 @@ function formatTimeDuration(seconds_) {
     return builder;
 }
 
+function requestGET(url, responseHandler) {
+    const request = new XMLHttpRequest();
+    request.onreadystatechange = function () {
+        if (request.readyState == 4) {
+            responseHandler(request.responseText);
+        }
+    }
+    request.open("GET", url, true);
+    request.send();
+}
+
 class DataParser {
 
     constructor(jsonData) {
-        if (jsonData === undefined) {
+        if (!jsonData) {
             throw "No data";
         }
         this.dataObjects = JSON.parse(jsonData);
@@ -281,23 +328,23 @@ class DataParser {
         return Array.from(this.partitionStats.keys());
     }
 
-    getDownload(){
+    getDownload() {
         return this.download;
     }
 
-    getUpload(){
+    getUpload() {
         return this.upload;
     }
 
-    getProcessCount(){
+    getProcessCount() {
         return this.processCount;
     }
 
-    getUptime(){
+    getUptime() {
         return this.uptime;
     }
 
-    getValueCount(){
+    getValueCount() {
         return this.valueCount;
     }
 
