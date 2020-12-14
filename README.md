@@ -28,8 +28,10 @@ Mostly not needed, but the following command line flags are available
  - port -> The port the web server will be running on; Default: 1510
  - delay -> Seconds between reading datasets; Default: 10s
  - entries -> Maximum amount of entries that will be stored; Default: 1000
+ - hideHostname -> If provided the charts page won't display the hostname; Default: false
+ 
  Example running on port 8080 reading new values every 15s and storing 500 entries:
- `remmon.exe -port 8080 -delay 15 - entries 500`
+ `remmon.exe -port 8080 -delay 15 -entries 500`
 
 ## Monitorable values
  - CPU utilization
