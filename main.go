@@ -320,7 +320,7 @@ func readCurrentData() DataObject {
 	handleError(err)
 
 	var dataset = DataObject{}
-	dataset.Timestamp = JSONTime{time.Now()}
+	dataset.Timestamp = time.Now().Unix()
 	dataset.RAM = RAMStats{vmStat.Total, vmStat.Available, vmStat.Used}
 	var partitionStatsArr = make([]PartitionStats, len(partitionsStat))
 	for i, partitionStat := range partitionsStat {

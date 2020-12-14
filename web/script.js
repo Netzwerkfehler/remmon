@@ -270,15 +270,15 @@ class DataParser {
 
         for (var i = 0; i < objectCount; i++) {
             const dataObject = this.dataObjects[i];
-            const unixTime = moment(dataObject.timestamp, "YYYY-MM-DD HH:mm:ss").valueOf();
+            const jsTime = dataObject.timestamp * 1000;
 
-            this.ramStats.push({ t: unixTime, y:  this.byteToGB(dataObject.ram.used) });
-            this.cpuStats.push({ t: unixTime, y: dataObject.cpu.utilization });
+            this.ramStats.push({ t: jsTime, y:  this.byteToGB(dataObject.ram.used) });
+            this.cpuStats.push({ t: jsTime, y: dataObject.cpu.utilization });
 
-            this.processCount.push({ t: unixTime, y: dataObject.system.processes });
+            this.processCount.push({ t: jsTime, y: dataObject.system.processes });
 
-            this.download.push({ t: unixTime, y: this.byteToGB(dataObject.network.recv) });
-            this.upload.push({ t: unixTime, y: this.byteToGB(dataObject.network.sent) });
+            this.download.push({ t: jsTime, y: this.byteToGB(dataObject.network.recv) });
+            this.upload.push({ t: jsTime, y: this.byteToGB(dataObject.network.sent) });
 
             const parts = dataObject.partitions;
             for (var j = 0; j < parts.length; j++) {
@@ -286,7 +286,7 @@ class DataParser {
                 const pName = part.name;
 
                 const pStats = this.partitionStats.has(pName) ? this.partitionStats.get(pName) : [];
-                pStats.push({ t: unixTime, y: this.byteToGB(part.used) });
+                pStats.push({ t: jsTime, y: this.byteToGB(part.used) });
                 this.partitionStats.set(pName, pStats);
 
                 var pData = {};

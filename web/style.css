@@ -14,6 +14,7 @@ body {
 .updateControls {
     display: flex;
     flex-direction: column;
+    align-items: flex-end;
 }
 
 .box {
@@ -95,7 +96,7 @@ label {
 }
 
 .middle {
-    min-width: 30%;
+    min-width: 46%;
     margin: 0 2% 0 2%;
     text-align: center;
 }
@@ -107,5 +108,10 @@ label {
 }
 
 .outer {
-    min-width: 18%;
+    min-width: 25%;
+}
+
+#updateButton {
+    width: 13.5em;
+    max-width: 100%;
 }

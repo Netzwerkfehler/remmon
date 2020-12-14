@@ -1,13 +1,8 @@
 package main
 
-import (
-	"fmt"
-	"time"
-)
-
 //DataObject holds data
 type DataObject struct {
-	Timestamp  JSONTime         `json:"timestamp"`
+	Timestamp  int64            `json:"timestamp"`
 	CPU        CPUStats         `json:"cpu"`
 	RAM        RAMStats         `json:"ram"`
 	Partitions []PartitionStats `json:"partitions"`
@@ -45,15 +40,4 @@ type SystemStats struct {
 type NetStats struct {
 	BytesSent     uint64 `json:"sent"`
 	BytesReceived uint64 `json:"recv"`
-}
-
-//JSONTime is used define a custom dateformat
-type JSONTime struct {
-	time.Time
-}
-
-//MarshalJSON is needed for the JSON#Marshal method
-func (t JSONTime) MarshalJSON() ([]byte, error) {
-	stamp := fmt.Sprintf("\"%s\"", t.Format("2006-01-02 15:04:05"))
-	return []byte(stamp), nil
 }
