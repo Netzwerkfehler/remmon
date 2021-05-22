@@ -1,5 +1,5 @@
 function generateChart(elementId, title, yAxisName, unitString, chartData, range) {
-    var config = {
+    const config = {
         data: {
             datasets: [{
                 label: title,
@@ -15,7 +15,7 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
         },
         options: {
             scales: {
-                xAxes: [{
+                x: {
                     display: true,
                     type: "time",
                     distribution: "linear",
@@ -39,34 +39,29 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
                             hour: "HH:mm"
                         }
                     }
-                }],
-                yAxes: [{
+                },
+                y: {
                     display: true,
                     gridLines: {
                         drawBorder: false
                     },
-                    scaleLabel: {
+                    title: {
                         display: true,
-                        labelString: yAxisName
+                        text: yAxisName
                     },
-                    ticks: {
-                        suggestedMin: range.min,
-                        suggestedMax: range.max,
-                        stepSize: range.step
-                    }
-                }]
+                    suggestedMin: range.min,
+                    suggestedMax: range.max,
+                    stepSize: range.step
+                }
             },
-            tooltips: {
-                intersect: false,
-                mode: "index",
-                callbacks: {
-                    label: function (tooltipItem, myData) {
-                        var label = myData.datasets[tooltipItem.datasetIndex].label || "";
-                        if (label) {
-                            label += ": ";
+            plugins: {
+                tooltip: {
+                    intersect: false,
+                    mode: "index",
+                    callbacks: {
+                        label: function (tooltipItem) {
+                            return tooltipItem.dataset.label + ": " + parseFloat(tooltipItem.parsed.y).toFixed(2) + " " + unitString;
                         }
-                        label += parseFloat(tooltipItem.value).toFixed(2) + " " + unitString;
-                        return label;
                     }
                 }
             },
@@ -77,7 +72,7 @@ function generateChart(elementId, title, yAxisName, unitString, chartData, range
 }
 
 function generatePieChart(elementId, title, yAxisName, unitString, labels, colors, chartData, maxValue) {
-    var config = {
+    const config = {
         type: "pie",
         data: {
             labels: labels,
@@ -88,23 +83,21 @@ function generatePieChart(elementId, title, yAxisName, unitString, labels, color
             }]
         },
         options: {
-            title: {
-                display: true,
-                text: title
-            },
-            tooltips: {
-                intersect: false,
-                mode: "index",
-                callbacks: {
-                    label: function (tooltipItem, myData) {
-                        var value = myData.datasets[0].data[tooltipItem.index];
-                        var label = myData.labels[tooltipItem.index] + ": ";
-
-                        var percent = value / maxValue * 100;
-
-                        return label + value.toFixed(2) + " " + unitString + " (" + percent.toFixed(2) + "%)";
+            plugins: {
+                title: {
+                    display: true,
+                    text: title
+                },
+                tooltip: {
+                    intersect: false,
+                    mode: "index",
+                    callbacks: {
+                        label: function (tooltipItem) {
+                            const value = tooltipItem.parsed;
+                            return tooltipItem.label + ": " + value.toFixed(2) + " " + unitString + " (" + (value / maxValue * 100).toFixed(2) + "%)";
+                        }
                     }
-                }
+                },
             },
             layout: {
                 padding: {
@@ -133,23 +126,23 @@ function generateCharts(jsonData) {
     this.cpuChart = generateChart(createChartWrapper("cpuChart", "box chartWrapper", cpuDiv), "CPU usage", "CPU in %", "%", parser.getCPUStats(), { min: 0, max: 100, step: 10 });
 
     this.pChartBlocks = [];
-    var pNames = parser.getAllPartitionNames();
-    for (var i = 0; i < pNames.length; i++) {
-        var pName = pNames[i];
+    const pNames = parser.getAllPartitionNames();
+    for (let i = 0; i < pNames.length; i++) {
+        const pName = pNames[i];
         insertHeadline("Disk " + pName);
         const partitionDiv = createDiv("partition" + pName);
         const pData = parser.getPartitionData(pName);
         const partChart = generateChart(createChartWrapper("partitionChart" + pName, "box chartWrapper rightSpace", partitionDiv), "Memory usage", "Memory in GB", "GB", parser.getPartitionStats(pName), { min: 0, max: pData.max, step: 50 });
         const partPieChart = generatePieChart(createChartWrapper("partitionPieChart" + pName, "box chartWrapper smallChart", partitionDiv), "Memory usage", "Memory in GB", "GB", ["Free", "Used"], ["green", "red"], pData.data, pData.max);
-        pChartBlocks.push({name: pName, lineChart: partChart, pieChart: partPieChart});
+        pChartBlocks.push({ name: pName, lineChart: partChart, pieChart: partPieChart });
     }
 
     insertHeadline("Network");
     const dlDiv = createDiv("download");
     this.dlChart = generateChart(createChartWrapper("downloadChart", "box chartWrapper", dlDiv), "Downloaded data", "Data in GB", "GB", parser.getDownload(), { min: 0, max: 0, step: 0.5 });
-    
+
     insertSpacer();
-    
+
     const ulDiv = createDiv("upload");
     this.ulChart = generateChart(createChartWrapper("uploadChart", "box chartWrapper", ulDiv), "Uploaded data", "Data in GB", "GB", parser.getUpload(), { min: 0, max: 0, step: 0.1 });
 
@@ -159,13 +152,13 @@ function generateCharts(jsonData) {
 
     updateText("uptime", formatTimeDuration(parser.getUptime()));
     updateText("values", parser.getValueCount());
-    requestGET("/hostname", function(response) {
+    requestGET("/hostname", function (response) {
         updateText("hostname", response);
     });
 }
 
 function createDiv(id) {
-    var divEl = document.createElement("div");
+    const divEl = document.createElement("div");
     document.getElementById("contentDiv").appendChild(divEl);
     divEl.id = id;
     divEl.classList = "chartDiv";
@@ -173,13 +166,13 @@ function createDiv(id) {
 }
 
 function insertSpacer() {
-    var spacerDiv = document.createElement("div");
+    const spacerDiv = document.createElement("div");
     spacerDiv.classList = "spacer";
     document.getElementById("contentDiv").appendChild(spacerDiv);
 }
 
 function insertHeadline(text) {
-    var hl = document.createElement("h1");
+    const hl = document.createElement("h1");
     hl.textContent = text;
     hl.classList = "statHL";
     document.getElementById("contentDiv").appendChild(hl);
@@ -190,24 +183,24 @@ function updateText(id, text) {
 }
 
 function createChartWrapper(id, classes, parent) {
-    var target = parent || document.getElementById("contentDiv");
+    const target = parent || document.getElementById("contentDiv");
 
-    var divEl = document.createElement("div");
+    const divEl = document.createElement("div");
     divEl.classList = classes;
     target.appendChild(divEl);
-    var canvasEl = document.createElement("canvas");
+    const canvasEl = document.createElement("canvas");
     canvasEl.id = id;
     divEl.appendChild(canvasEl);
     return id;
 }
 
 function formatTimeDuration(seconds_) {
-    var builder = "";
+    let builder = "";
 
-    var seconds = Math.floor(seconds_) % 60
-    var minutes = Math.floor(seconds_ / 60) % 60
-    var hours = Math.floor(seconds_ / 60 / 60) % 24
-    var days = Math.floor(seconds_ / 60 / 60 / 24)
+    const seconds = Math.floor(seconds_) % 60
+    const minutes = Math.floor(seconds_ / 60) % 60
+    const hours = Math.floor(seconds_ / 60 / 60) % 24
+    const days = Math.floor(seconds_ / 60 / 60 / 24)
 
     if (days > 0) {
         builder += days + "d ";
@@ -268,28 +261,28 @@ class DataParser {
 
         this.valueCount = objectCount;
 
-        for (var i = 0; i < objectCount; i++) {
+        for (let i = 0; i < objectCount; i++) {
             const dataObject = this.dataObjects[i];
             const jsTime = dataObject.timestamp * 1000;
 
-            this.ramStats.push({ t: jsTime, y:  this.byteToGB(dataObject.ram.used) });
-            this.cpuStats.push({ t: jsTime, y: dataObject.cpu.utilization });
+            this.ramStats.push({ x: jsTime, y: this.byteToGB(dataObject.ram.used) });
+            this.cpuStats.push({ x: jsTime, y: dataObject.cpu.utilization });
 
-            this.processCount.push({ t: jsTime, y: dataObject.system.processes });
+            this.processCount.push({ x: jsTime, y: dataObject.system.processes });
 
-            this.download.push({ t: jsTime, y: this.byteToGB(dataObject.network.recv) });
-            this.upload.push({ t: jsTime, y: this.byteToGB(dataObject.network.sent) });
+            this.download.push({ x: jsTime, y: this.byteToGB(dataObject.network.recv) });
+            this.upload.push({ x: jsTime, y: this.byteToGB(dataObject.network.sent) });
 
             const parts = dataObject.partitions;
-            for (var j = 0; j < parts.length; j++) {
+            for (let j = 0; j < parts.length; j++) {
                 const part = parts[j];
                 const pName = part.name;
 
                 const pStats = this.partitionStats.has(pName) ? this.partitionStats.get(pName) : [];
-                pStats.push({ t: jsTime, y: this.byteToGB(part.used) });
+                pStats.push({ x: jsTime, y: this.byteToGB(part.used) });
                 this.partitionStats.set(pName, pStats);
 
-                var pData = {};
+                const pData = {};
                 pData.data = [this.byteToGB(part.free), this.byteToGB(part.used)];
                 pData.max = this.byteToGB(part.total);
                 this.partitionData.set(pName, pData);
